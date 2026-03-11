@@ -1,0 +1,35 @@
+{
+  "name": "@sartoris/pi-superpowers",
+  "version": "1.0.0",
+  "description": "Superpowers skills framework for Pi - TDD, debugging, collaboration patterns, and proven development techniques",
+  "author": "Sartoris",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sartoris/pi-superpowers"
+  },
+  "keywords": ["pi", "skills", "tdd", "debugging", "collaboration", "best-practices", "workflows"],
+  "type": "module",
+  "pi": {
+    "extensions": ["./extensions/bootstrap.ts", "./extensions/subagent.ts"],
+    "skills": ["./skills"],
+    "prompts": ["./prompts"]
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-agent-core": "*",
+    "@mariozechner/pi-ai": "*",
+    "@mariozechner/pi-coding-agent": "*",
+    "@mariozechner/pi-tui": "*",
+    "@sinclair/typebox": ">=0.34.0"
+  },
+  "devDependencies": {
+    "@sinclair/typebox": "^0.34.0",
+    "vitest": "^3.0.0",
+    "typescript": "^5.7.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  }
+}
