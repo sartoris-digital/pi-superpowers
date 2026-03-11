@@ -19,6 +19,7 @@ export interface AgentConfig {
   description: string;
   tools?: string[];
   model?: string;
+  tier?: string;  // "fast" | "standard" | "reasoning"
   systemPrompt: string;
   source: "user" | "project" | "bundled";
   filePath: string;
@@ -93,6 +94,7 @@ export function loadAgentsFromDir(dir: string, source: "user" | "project" | "bun
       description: frontmatter.description,
       tools: tools && tools.length > 0 ? tools : undefined,
       model: frontmatter.model || undefined,
+      tier: frontmatter.tier || undefined,
       systemPrompt: body.trim(),
       source,
       filePath,

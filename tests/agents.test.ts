@@ -58,6 +58,28 @@ You are a test agent. Do test things.
     expect(agents).toHaveLength(0);
   });
 
+  it("parses tier from frontmatter", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agents-tier-"));
+    fs.writeFileSync(
+      path.join(dir, "test-agent.md"),
+      "---\nname: test-agent\ndescription: Test\ntier: fast\n---\nPrompt",
+    );
+    const agents = loadAgentsFromDir(dir, "project");
+    expect(agents[0].tier).toBe("fast");
+    fs.rmSync(dir, { recursive: true });
+  });
+
+  it("returns undefined tier when not specified", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agents-notier-"));
+    fs.writeFileSync(
+      path.join(dir, "test-agent.md"),
+      "---\nname: test-agent\ndescription: Test\n---\nPrompt",
+    );
+    const agents = loadAgentsFromDir(dir, "project");
+    expect(agents[0].tier).toBeUndefined();
+    fs.rmSync(dir, { recursive: true });
+  });
+
   it("parses agent without tools or model", () => {
     const content = `---
 name: minimal
