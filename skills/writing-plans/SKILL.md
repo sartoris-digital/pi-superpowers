@@ -103,6 +103,41 @@ git commit -m "feat: add specific feature"
 ```
 ````
 
+**Tier Annotations:**
+
+Each task should include a recommended tier for the implementing agent:
+
+```markdown
+### Task N: [Component Name]
+
+**Tier:** standard (or fast/reasoning based on complexity)
+```
+
+Tier selection guide:
+- `fast` — Simple file creation, config changes, documentation
+- `standard` — Feature implementation, test writing, integration work
+- `reasoning` — Complex debugging, security-sensitive changes, architectural decisions
+
+## Story Structure (Optional)
+
+Plans can optionally include user stories with acceptance criteria for use with the ralph execution strategy:
+
+```markdown
+### Story N: [Story Name]
+
+**As a** [role], **I want** [feature], **so that** [benefit].
+
+**Acceptance Criteria:**
+- [ ] [Criterion 1 — testable]
+- [ ] [Criterion 2 — testable]
+- [ ] [Criterion 3 — testable]
+
+**Tasks:**
+1. [Task with steps...]
+```
+
+This format allows the executing-plans ralph strategy to track story-by-story completion with verification against acceptance criteria.
+
 ## Remember
 - Exact file paths always
 - Complete code in plan (not "add validation")
