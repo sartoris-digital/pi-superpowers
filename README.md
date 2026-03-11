@@ -22,15 +22,20 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 |---|---|
 | **bootstrap** | Injects the using-superpowers skill into every Pi session via the `context` event |
 | **subagent** | Registers a `subagent` tool for delegating tasks to specialized agents |
+| **state-manager** | Persistent state CRUD for execution modes |
+| **persistence-engine** | Continuation loops for ralph and autopilot modes |
+| **orchestrator** | Keyword detection, delegation audit, mode reminders |
 
-### Skills (16)
+### Skills (20)
 
 | Skill | Description |
 |---|---|
 | **using-superpowers** | Meta-skill: when and how to invoke other skills |
 | **brainstorming** | Design-first workflow with collaborative question-driven design |
+| **cancel** | Cancel active execution mode and clean up state |
 | **writing-plans** | Create detailed implementation plans with atomic tasks |
 | **executing-plans** | Execute implementation plans task by task |
+| **ecomode** | Token-efficient model routing modifier |
 | **subagent-driven-development** | Dispatch subagents per task with two-stage review |
 | **dispatching-parallel-agents** | Parallel agent dispatch for independent subsystems |
 | **test-driven-development** | Strict Red-Green-Refactor TDD enforcement |
@@ -40,11 +45,13 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | **security-review** | Multi-agent security audit with vulnerability validation and false-positive filtering |
 | **requesting-code-review** | Dispatch quick single-agent code review after task completion |
 | **receiving-code-review** | How to respond to review feedback |
+| **plan** | Unified planning entry point with broad/specific detection |
+| **ralplan** | Consensus planning with planner, architect, and critic loop |
 | **using-git-worktrees** | Isolated workspaces for feature branches |
 | **finishing-a-development-branch** | End-of-work workflow (merge/PR/preserve/discard) |
 | **writing-skills** | How to create new skills |
 
-### Agents (7)
+### Agents (14)
 
 | Agent | Model | Purpose |
 |---|---|---|
@@ -55,8 +62,15 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | **bug-hunter** | claude-opus-4-6 | Deep bug analysis of PR diffs (diff-only and context-aware modes) |
 | **security-reviewer** | claude-opus-4-6 | 3-phase security audit with vulnerability assessment and exploit scenarios |
 | **issue-validator** | claude-opus-4-6 | Independent verification of flagged code review issues |
+| **architect** | claude-opus-4-6 | Plan review and completion verification |
+| **critic** | claude-opus-4-6 | Adversarial quality review of plans and designs |
+| **designer** | claude-sonnet-4-6 | UI/frontend components, styling, accessibility |
+| **researcher** | claude-sonnet-4-6 | External docs and API reference lookup |
+| **scientist** | claude-sonnet-4-6 | Data analysis, hypothesis testing |
+| **vision** | claude-sonnet-4-6 | Visual analysis of screenshots and mockups |
+| **writer** | claude-haiku-4-5 | Documentation, READMEs, changelogs |
 
-### Prompts (5)
+### Prompts (9)
 
 | Command | Description |
 |---|---|
@@ -65,6 +79,10 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | `/execute-plan` | Execute an existing plan |
 | `/code-review` | Run a multi-agent code review on a PR or branch diff |
 | `/security-review` | Run a security-focused review to identify exploitable vulnerabilities |
+| `/cancel` | Cancel active execution mode |
+| `/ecomode` | Toggle token-efficient model routing |
+| `/plan` | Start a planning session |
+| `/ralplan` | Start consensus planning with review loop |
 
 ## Subagent Usage
 
@@ -101,6 +119,52 @@ Agents are discovered from three sources (highest priority first):
 3. **Bundled agents** — shipped with this package
 
 Override any bundled agent by creating a `.md` file with the same `name` in your project or user agents directory.
+
+## Orchestration Features
+
+### Tier System
+
+Model tiers map agent capabilities to cost-appropriate models:
+
+| Tier | Default Model | Agents |
+|------|--------------|--------|
+| `fast` | claude-haiku-4-5 | scout, writer |
+| `standard` | claude-sonnet-4-6 | planner, worker, code-reviewer, designer, researcher, scientist, vision |
+| `reasoning` | claude-opus-4-6 | bug-hunter, security-reviewer, issue-validator, architect, critic |
+
+Override via `.pi/superpowers.json`:
+```json
+{
+  "models": { "fast": "claude-haiku-4-5", "standard": "claude-sonnet-4-6", "reasoning": "claude-opus-4-6" },
+  "routing": { "defaultTier": "standard" }
+}
+```
+
+### Execution Strategies
+
+The `executing-plans` skill supports 4 strategies:
+
+| Strategy | Flag | Best For |
+|----------|------|----------|
+| Sequential | (default) | Dependent tasks, small plans |
+| Parallel | `--parallel` | Many independent tasks |
+| Autopilot | `--autopilot` | Large plans, hands-off |
+| Ralph | `--ralph` | PRD with user stories |
+
+### Planning Workflows
+
+- **`/plan`** — Detects broad vs. specific requests, routes to interview or direct planning
+- **`/ralplan`** — Consensus planning: planner → architect → critic review loop
+
+### State Management
+
+The `state` tool provides persistent state for execution modes:
+```
+state read <key>        — Read state
+state write <key> {...} — Write state
+state clear <key>       — Delete state
+state list              — List all active states
+```
 
 ## Multi-Agent Code Review
 
