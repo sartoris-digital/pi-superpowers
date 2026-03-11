@@ -11,7 +11,7 @@
   "keywords": ["pi", "skills", "tdd", "debugging", "collaboration", "best-practices", "workflows"],
   "type": "module",
   "pi": {
-    "extensions": ["./extensions/bootstrap.ts", "./extensions/subagent.ts", "./extensions/state-manager.ts", "./extensions/persistence-engine.ts"],
+    "extensions": ["./extensions/bootstrap.ts", "./extensions/subagent.ts", "./extensions/state-manager.ts", "./extensions/persistence-engine.ts", "./extensions/orchestrator.ts"],
     "skills": ["./skills"],
     "prompts": ["./prompts"]
   },
