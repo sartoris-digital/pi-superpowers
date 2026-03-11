@@ -167,3 +167,37 @@ describe("discoverAgents priority", () => {
     expect(scout!.source).toBe("bundled");
   });
 });
+
+describe("bundled agents", () => {
+  it("discovers all 14 bundled agents", () => {
+    const bundledDir = path.join(__dirname, "..", "agents");
+    const agents = loadAgentsFromDir(bundledDir, "bundled");
+    expect(agents).toHaveLength(14);
+    const names = agents.map((a) => a.name).sort();
+    expect(names).toEqual([
+      "architect",
+      "bug-hunter",
+      "code-reviewer",
+      "critic",
+      "designer",
+      "issue-validator",
+      "planner",
+      "researcher",
+      "scientist",
+      "scout",
+      "security-reviewer",
+      "vision",
+      "worker",
+      "writer",
+    ]);
+  });
+
+  it("all bundled agents have tier field", () => {
+    const bundledDir = path.join(__dirname, "..", "agents");
+    const agents = loadAgentsFromDir(bundledDir, "bundled");
+    for (const agent of agents) {
+      expect(agent.tier, `${agent.name} should have a tier`).toBeDefined();
+      expect(["fast", "standard", "reasoning"]).toContain(agent.tier);
+    }
+  });
+});
