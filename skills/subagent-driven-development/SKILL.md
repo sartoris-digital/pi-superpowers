@@ -260,6 +260,26 @@ Done!
 - Dispatch fix subagent with specific instructions
 - Don't try to fix manually (context pollution)
 
+## Completion Verification
+
+After both reviews pass for a task, dispatch the architect for verification:
+
+```
+subagent({
+  agent: "architect",
+  task: "MODE: verification\n\nTask: [task description]\nClaimed: Implementation complete, tests pass.\n\nVerify:\n1. Run: [test command]\n2. Check files changed match task scope\n3. Confirm no regressions",
+  tier: "[light/standard/thorough based on task complexity]"
+})
+```
+
+**Tier selection for verification:**
+- Task touches <5 files and has clear test coverage → `tier: "fast"` (light verification)
+- Default → `tier: "standard"`
+- Task touches auth, security, or >20 files → `tier: "reasoning"` (thorough verification)
+
+If architect returns "verified" → mark as completed.
+If architect returns "insufficient" or "failed" → address gaps and re-verify.
+
 ## Integration
 
 **Required workflow skills:**
