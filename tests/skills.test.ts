@@ -7,6 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SKILLS_DIR = path.join(__dirname, "..", "skills");
 const EXPECTED_SKILLS = [
   "brainstorming",
+  "code-review",
   "dispatching-parallel-agents",
   "executing-plans",
   "finishing-a-development-branch",
@@ -23,7 +24,7 @@ const EXPECTED_SKILLS = [
 ];
 
 describe("skills", () => {
-  it("has all 14 expected skill directories", () => {
+  it("has all 15 expected skill directories", () => {
     const dirs = fs
       .readdirSync(SKILLS_DIR, { withFileTypes: true })
       .filter((d) => d.isDirectory())
