@@ -58,6 +58,28 @@ You are a test agent. Do test things.
     expect(agents).toHaveLength(0);
   });
 
+  it("parses tier from frontmatter", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agents-tier-"));
+    fs.writeFileSync(
+      path.join(dir, "test-agent.md"),
+      "---\nname: test-agent\ndescription: Test\ntier: fast\n---\nPrompt",
+    );
+    const agents = loadAgentsFromDir(dir, "project");
+    expect(agents[0].tier).toBe("fast");
+    fs.rmSync(dir, { recursive: true });
+  });
+
+  it("returns undefined tier when not specified", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agents-notier-"));
+    fs.writeFileSync(
+      path.join(dir, "test-agent.md"),
+      "---\nname: test-agent\ndescription: Test\n---\nPrompt",
+    );
+    const agents = loadAgentsFromDir(dir, "project");
+    expect(agents[0].tier).toBeUndefined();
+    fs.rmSync(dir, { recursive: true });
+  });
+
   it("parses agent without tools or model", () => {
     const content = `---
 name: minimal
@@ -143,5 +165,39 @@ describe("discoverAgents priority", () => {
     const scout = agents.find((a) => a.name === "scout");
     expect(scout).toBeDefined();
     expect(scout!.source).toBe("bundled");
+  });
+});
+
+describe("bundled agents", () => {
+  it("discovers all 14 bundled agents", () => {
+    const bundledDir = path.join(__dirname, "..", "agents");
+    const agents = loadAgentsFromDir(bundledDir, "bundled");
+    expect(agents).toHaveLength(14);
+    const names = agents.map((a) => a.name).sort();
+    expect(names).toEqual([
+      "architect",
+      "bug-hunter",
+      "code-reviewer",
+      "critic",
+      "designer",
+      "issue-validator",
+      "planner",
+      "researcher",
+      "scientist",
+      "scout",
+      "security-reviewer",
+      "vision",
+      "worker",
+      "writer",
+    ]);
+  });
+
+  it("all bundled agents have tier field", () => {
+    const bundledDir = path.join(__dirname, "..", "agents");
+    const agents = loadAgentsFromDir(bundledDir, "bundled");
+    for (const agent of agents) {
+      expect(agent.tier, `${agent.name} should have a tier`).toBeDefined();
+      expect(["fast", "standard", "reasoning"]).toContain(agent.tier);
+    }
   });
 });

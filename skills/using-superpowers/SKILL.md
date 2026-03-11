@@ -115,3 +115,95 @@ The skill itself tells you which.
 ## User Instructions
 
 Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
+
+## New Agents
+
+These agents are available via the `subagent` tool:
+
+| Agent | Tier | Purpose |
+|-------|------|---------|
+| architect | reasoning | Plan review and completion verification |
+| critic | reasoning | Adversarial quality review of plans and designs |
+| designer | standard | UI/frontend components, styling, accessibility |
+| writer | fast | Documentation, READMEs, changelogs |
+| researcher | standard | External documentation and API reference lookup |
+| scientist | standard | Data analysis, hypothesis testing |
+| vision | standard | Visual analysis of screenshots and mockups |
+
+## Tier System
+
+Model tiers map agent names to model capabilities:
+
+| Tier | Default Model | Used For |
+|------|--------------|----------|
+| `fast` | claude-haiku-4-5 | Quick lookups, documentation, recon |
+| `standard` | claude-sonnet-4-6 | Implementation, review, analysis |
+| `reasoning` | claude-opus-4-6 | Complex debugging, security, architecture |
+
+Override via `.pi/superpowers.json`:
+```json
+{
+  "models": {
+    "fast": "claude-haiku-4-5",
+    "standard": "claude-sonnet-4-6",
+    "reasoning": "claude-opus-4-6"
+  }
+}
+```
+
+Pass tiers explicitly in subagent dispatch:
+```
+subagent({ agent: "worker", task: "...", tier: "standard" })
+```
+
+## Execution Strategies
+
+The `executing-plans` skill supports 4 strategies:
+
+| Strategy | Keyword | Best For |
+|----------|---------|----------|
+| Sequential | (default) | Dependent tasks, small plans |
+| Parallel | "parallel" | Many independent tasks |
+| Autopilot | "autopilot" | Large plans, hands-off |
+| Ralph | "ralph" | PRD with user stories |
+
+## Magic Keywords
+
+These keywords are detected automatically by the orchestrator:
+
+| Keyword | Action |
+|---------|--------|
+| `ralph` | Activate ralph (story-driven) execution strategy |
+| `autopilot` | Activate autopilot execution strategy |
+| `ecomode` | Toggle token-efficient model routing |
+| `cancel` | Cancel active execution mode |
+| `ralplan` | Start consensus planning |
+| `parallel` | Use parallel execution strategy |
+
+## Planning Workflows
+
+- **`/plan`** — Unified entry point. Detects broad vs. specific requests, routes to interview or direct planning.
+- **`/ralplan`** — Consensus planning: planner → architect → critic review loop until approved.
+
+## Verification Tiers
+
+The `verification-before-completion` skill dispatches the architect agent at different tiers:
+
+| Tier | When | Evidence Required |
+|------|------|-------------------|
+| Light (fast) | <5 files, <100 lines | Build passes + diagnostics clean |
+| Standard | Default | Build + full test suite passes |
+| Thorough (reasoning) | >20 files, security, architecture | Full architect review + all tests + security |
+
+## State Management
+
+The `state` tool provides persistent state for execution modes:
+
+```
+state read <key>       — Read state
+state write <key> {...} — Write state
+state clear <key>      — Delete state
+state list             — List all active states
+```
+
+Used by autopilot, ralph, ecomode, and the persistence engine.

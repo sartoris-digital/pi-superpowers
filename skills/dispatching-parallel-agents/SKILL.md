@@ -179,6 +179,35 @@ From debugging session (2025-10-03):
 - All fixes integrated successfully
 - Zero conflicts between agent changes
 
+## Independence Analysis
+
+Before dispatching in parallel, verify independence:
+
+1. **File independence** — tasks don't modify the same files
+2. **Data independence** — tasks don't depend on each other's output
+3. **State independence** — tasks don't share mutable state
+
+If tasks have dependencies, split into sequential batches separated by parallel groups.
+
+## Background vs. Foreground
+
+- **Foreground:** Tasks that produce output you need before proceeding (scout, planner)
+- **Background:** Long-running tasks where you can continue other work (builds, test suites)
+
+## Tier Routing for Parallel Tasks
+
+Assign tiers based on individual task complexity, not batch complexity:
+
+```
+subagent({
+  tasks: [
+    { agent: "scout", task: "Find auth code", tier: "fast" },
+    { agent: "worker", task: "Implement auth fix", tier: "standard" },
+    { agent: "bug-hunter", task: "Check for regressions", tier: "reasoning" }
+  ]
+})
+```
+
 ## Pi Platform Notes
 
 In Pi, use the `subagent` tool in parallel mode instead of multiple `Agent` or `Task` tool calls.
@@ -187,9 +216,9 @@ In Pi, use the `subagent` tool in parallel mode instead of multiple `Agent` or `
 ```
 subagent({
   tasks: [
-    { agent: "worker", task: "Fix agent-tool-abort.test.ts failures" },
-    { agent: "worker", task: "Fix batch-completion-behavior.test.ts failures" },
-    { agent: "worker", task: "Fix tool-approval-race-conditions.test.ts failures" }
+    { agent: "worker", task: "Fix agent-tool-abort.test.ts failures", tier: "standard" },
+    { agent: "worker", task: "Fix batch-completion-behavior.test.ts failures", tier: "standard" },
+    { agent: "worker", task: "Fix tool-approval-race-conditions.test.ts failures", tier: "standard" }
   ]
 })
 ```

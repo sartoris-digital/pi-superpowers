@@ -1,6 +1,6 @@
 {
   "name": "@sartoris/pi-superpowers",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "Superpowers skills framework for Pi - TDD, debugging, collaboration patterns, and proven development techniques",
   "author": "Sartoris",
   "license": "MIT",
@@ -11,7 +11,7 @@
   "keywords": ["pi", "skills", "tdd", "debugging", "collaboration", "best-practices", "workflows"],
   "type": "module",
   "pi": {
-    "extensions": ["./extensions/bootstrap.ts", "./extensions/subagent.ts"],
+    "extensions": ["./extensions/bootstrap.ts", "./extensions/subagent.ts", "./extensions/state-manager.ts", "./extensions/persistence-engine.ts", "./extensions/orchestrator.ts"],
     "skills": ["./skills"],
     "prompts": ["./prompts"]
   },

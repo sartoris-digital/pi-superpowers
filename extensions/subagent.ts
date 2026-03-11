@@ -28,6 +28,9 @@ import {
   emptyUsage,
 } from "./subagent-utils.js";
 import type { Message, UsageStats } from "./subagent-utils.js";
+import * as path from "node:path";
+import { loadRouterConfig, resolveModel } from "./model-router-utils.js";
+import type { RouterConfig } from "./model-router-utils.js";
 
 // Constants
 const MAX_PARALLEL_TASKS = 8;
@@ -90,8 +93,13 @@ async function runSingleAgent(
   task: string,
   signal: AbortSignal,
   onUpdate: (details: Partial<SubagentDetails>) => void,
+  routerConfig?: RouterConfig,
+  tier?: string,
 ): Promise<SingleResult> {
-  const args = buildAgentArgs({ model: agent.model, tools: agent.tools });
+  const resolvedModel = routerConfig
+    ? resolveModel(agent.name, agent, routerConfig, { explicitTier: tier, taskPrompt: task })
+    : agent.model;
+  const args = buildAgentArgs({ model: resolvedModel, tools: agent.tools });
 
   // Build system prompt with agent's system prompt
   const fullPrompt = agent.systemPrompt
@@ -191,7 +199,7 @@ async function runSingleAgent(
         success: code === 0,
         output,
         usage,
-        model: agent.model,
+        model: resolvedModel,
         error,
         toolCalls,
       });
@@ -225,6 +233,9 @@ export default function (pi: ExtensionAPI) {
   const AgentTask = Type.Object({
     agent: Type.String({ description: "Agent name (e.g. 'worker', 'scout', 'planner', 'code-reviewer')" }),
     task: Type.String({ description: "Task description for the agent" }),
+    tier: Type.Optional(Type.String({
+      description: 'Model tier override: "fast", "standard", or "reasoning". If omitted, uses agent default or auto-routes based on task complexity.',
+    })),
   });
 
   const ParamsSchema = Type.Object(
@@ -241,6 +252,9 @@ export default function (pi: ExtensionAPI) {
       })),
       chain: Type.Optional(Type.Array(AgentTask, {
         description: "Array of agent-task pairs for sequential execution. Use {previous} in task to reference previous output.",
+      })),
+      tier: Type.Optional(Type.String({
+        description: 'Model tier override for single mode: "fast", "standard", or "reasoning".',
       })),
     },
     {
@@ -274,6 +288,8 @@ export default function (pi: ExtensionAPI) {
         projectAgentsDir ? "both" : "user",
       );
 
+      const routerConfig = loadRouterConfig(projectAgentsDir ? path.dirname(projectAgentsDir) : undefined);
+
       // Helper: find agent by name
       function findAgent(name: string): AgentConfig | undefined {
         return agents.find((a) => a.name === name);
@@ -282,7 +298,7 @@ export default function (pi: ExtensionAPI) {
       // Determine mode
       if (params.chain && Array.isArray(params.chain)) {
         // Chain mode: sequential execution with {previous} substitution
-        const chain = params.chain as Array<{ agent: string; task: string }>;
+        const chain = params.chain as Array<{ agent: string; task: string; tier?: string }>;
         let previousOutput = "";
         const results: SingleResult[] = [];
 
@@ -306,7 +322,7 @@ export default function (pi: ExtensionAPI) {
               agent: step.agent,
               ...details,
             });
-          });
+          }, routerConfig, step.tier);
 
           results.push(result);
           previousOutput = result.output;
@@ -344,7 +360,7 @@ export default function (pi: ExtensionAPI) {
         };
       } else if (params.tasks && Array.isArray(params.tasks)) {
         // Parallel mode
-        const tasks = params.tasks as Array<{ agent: string; task: string }>;
+        const tasks = params.tasks as Array<{ agent: string; task: string; tier?: string }>;
 
         if (tasks.length > MAX_PARALLEL_TASKS) {
           return {
@@ -378,7 +394,7 @@ export default function (pi: ExtensionAPI) {
                 agent: t.agent,
                 ...details,
               });
-            });
+            }, routerConfig, t.tier);
           },
         );
 
@@ -424,6 +440,8 @@ export default function (pi: ExtensionAPI) {
           (details) => {
             onUpdate({ type: "single_progress", agent: params.agent, ...details });
           },
+          routerConfig,
+          params.tier as string | undefined,
         );
 
         if (!result.success) {

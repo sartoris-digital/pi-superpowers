@@ -82,20 +82,20 @@ digraph process {
 }
 ```
 
-## Model Selection
+## Model Selection via Tiers
 
-Use the least powerful model that can handle each role to conserve cost and increase speed.
+The `subagent` tool accepts a `tier` parameter that maps to models via `.pi/superpowers.json`. Use tiers instead of hardcoded model names.
 
-**Mechanical implementation tasks** (isolated functions, clear specs, 1-2 files): use a fast, cheap model. Most implementation tasks are mechanical when the plan is well-specified.
+**Mechanical implementation tasks** (isolated functions, clear specs, 1-2 files) → `tier: "fast"`
 
-**Integration and judgment tasks** (multi-file coordination, pattern matching, debugging): use a standard model.
+**Integration and judgment tasks** (multi-file coordination, pattern matching, debugging) → `tier: "standard"`
 
-**Architecture, design, and review tasks**: use the most capable available model.
+**Architecture, design, and review tasks** → `tier: "reasoning"`
 
 **Task complexity signals:**
-- Touches 1-2 files with a complete spec → cheap model
-- Touches multiple files with integration concerns → standard model
-- Requires design judgment or broad codebase understanding → most capable model
+- Touches 1-2 files with a complete spec → `tier: "fast"`
+- Touches multiple files with integration concerns → `tier: "standard"`
+- Requires design judgment or broad codebase understanding → `tier: "reasoning"`
 
 ## Handling Implementer Status
 
@@ -260,6 +260,26 @@ Done!
 - Dispatch fix subagent with specific instructions
 - Don't try to fix manually (context pollution)
 
+## Completion Verification
+
+After both reviews pass for a task, dispatch the architect for verification:
+
+```
+subagent({
+  agent: "architect",
+  task: "MODE: verification\n\nTask: [task description]\nClaimed: Implementation complete, tests pass.\n\nVerify:\n1. Run: [test command]\n2. Check files changed match task scope\n3. Confirm no regressions",
+  tier: "[light/standard/thorough based on task complexity]"
+})
+```
+
+**Tier selection for verification:**
+- Task touches <5 files and has clear test coverage → `tier: "fast"` (light verification)
+- Default → `tier: "standard"`
+- Task touches auth, security, or >20 files → `tier: "reasoning"` (thorough verification)
+
+If architect returns "verified" → mark as completed.
+If architect returns "insufficient" or "failed" → address gaps and re-verify.
+
 ## Integration
 
 **Required workflow skills:**
@@ -280,15 +300,15 @@ In Pi, replace all `Task` tool references with the `subagent` tool. The subagent
 
 **Single mode** (for dispatching one implementer or reviewer):
 ```
-subagent({ agent: "worker", task: "..." })
+subagent({ agent: "worker", task: "...", tier: "standard" })
 ```
 
 **Chain mode** (for two-stage review after implementation):
 ```
 subagent({
   chain: [
-    { agent: "worker", task: "Implement task N: <full task text and context>" },
-    { agent: "code-reviewer", task: "Review changes from {previous}. Check spec compliance and code quality." }
+    { agent: "worker", task: "Implement task N: <full task text and context>", tier: "standard" },
+    { agent: "code-reviewer", task: "Review changes from {previous}. Check spec compliance and code quality.", tier: "standard" }
   ]
 })
 ```
@@ -297,8 +317,8 @@ subagent({
 ```
 subagent({
   tasks: [
-    { agent: "worker", task: "Implement task A: ..." },
-    { agent: "worker", task: "Implement task B: ..." }
+    { agent: "worker", task: "Implement task A: ...", tier: "standard" },
+    { agent: "worker", task: "Implement task B: ...", tier: "standard" }
   ]
 })
 ```
