@@ -187,9 +187,9 @@ In Pi, use the `subagent` tool in parallel mode instead of multiple `Agent` or `
 ```
 subagent({
   tasks: [
-    { agent: "worker", task: "Fix agent-tool-abort.test.ts failures" },
-    { agent: "worker", task: "Fix batch-completion-behavior.test.ts failures" },
-    { agent: "worker", task: "Fix tool-approval-race-conditions.test.ts failures" }
+    { agent: "worker", task: "Fix agent-tool-abort.test.ts failures", tier: "standard" },
+    { agent: "worker", task: "Fix batch-completion-behavior.test.ts failures", tier: "standard" },
+    { agent: "worker", task: "Fix tool-approval-race-conditions.test.ts failures", tier: "standard" }
   ]
 })
 ```
