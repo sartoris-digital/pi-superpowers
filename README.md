@@ -23,7 +23,7 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | **bootstrap** | Injects the using-superpowers skill into every Pi session via the `context` event |
 | **subagent** | Registers a `subagent` tool for delegating tasks to specialized agents |
 
-### Skills (14)
+### Skills (15)
 
 | Skill | Description |
 |---|---|
@@ -36,28 +36,32 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | **test-driven-development** | Strict Red-Green-Refactor TDD enforcement |
 | **systematic-debugging** | Four-phase root cause debugging methodology |
 | **verification-before-completion** | Evidence-based completion claims |
-| **requesting-code-review** | Dispatch code review after task completion |
+| **code-review** | Multi-agent code review pipeline with parallel review and validation |
+| **requesting-code-review** | Dispatch quick single-agent code review after task completion |
 | **receiving-code-review** | How to respond to review feedback |
 | **using-git-worktrees** | Isolated workspaces for feature branches |
 | **finishing-a-development-branch** | End-of-work workflow (merge/PR/preserve/discard) |
 | **writing-skills** | How to create new skills |
 
-### Agents (4)
+### Agents (6)
 
 | Agent | Model | Purpose |
 |---|---|---|
 | **scout** | claude-haiku-4-5 | Fast codebase recon for handoff |
 | **planner** | claude-sonnet-4-5 | Read-only implementation planning |
 | **worker** | claude-sonnet-4-5 | Full-capability task execution |
-| **code-reviewer** | claude-sonnet-4-5 | Code review against specs and standards |
+| **code-reviewer** | claude-sonnet-4-5 | Code review against specs and standards, compliance auditing |
+| **bug-hunter** | claude-opus-4-5 | Deep bug analysis of PR diffs (diff-only and context-aware modes) |
+| **issue-validator** | claude-opus-4-5 | Independent verification of flagged code review issues |
 
-### Prompts (3)
+### Prompts (4)
 
 | Command | Description |
 |---|---|
 | `/brainstorm` | Start a brainstorming session |
 | `/write-plan` | Create an implementation plan |
 | `/execute-plan` | Execute an existing plan |
+| `/code-review` | Run a multi-agent code review on a PR or branch diff |
 
 ## Subagent Usage
 
@@ -94,6 +98,31 @@ Agents are discovered from three sources (highest priority first):
 3. **Bundled agents** — shipped with this package
 
 Override any bundled agent by creating a `.md` file with the same `name` in your project or user agents directory.
+
+## Multi-Agent Code Review
+
+The `/code-review` command runs a comprehensive review pipeline that orchestrates multiple agents across model tiers:
+
+```
+Pre-flight (scout/haiku) → Config discovery (scout/haiku) → Summarize (sonnet)
+→ Parallel review: 2× compliance audit (sonnet) + 2× bug hunt (opus)
+→ Validate each issue independently (opus/sonnet) → Filter → Report
+```
+
+Only high-signal, independently validated issues are reported. See `skills/code-review/SKILL.md` for full pipeline documentation.
+
+### Model Configuration
+
+The pipeline defaults to Claude models but supports any provider Pi can use. Override models via:
+
+1. **Project agent overrides** — Create `.pi/agents/<agent>.md` with your preferred `model:` in frontmatter
+2. **Config file** — Create `.pi/code-review.json` with tier-based overrides:
+   ```json
+   { "models": { "fast": "gpt-4.1-mini", "standard": "gpt-4.1-mini", "reasoning": "gpt-4.1" } }
+   ```
+3. **User agent overrides** — Place agent files in `~/.pi/agent/agents/` for cross-project defaults
+
+See `skills/code-review/model-config.md` for full configuration documentation with examples for Claude, GPT, Gemini, and local models.
 
 ## Credits
 
