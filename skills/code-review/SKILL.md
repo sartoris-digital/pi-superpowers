@@ -218,6 +218,26 @@ BASE_SHA=$(git merge-base main HEAD)
 HEAD_SHA=$(git rev-parse HEAD)
 ```
 
+### Adding security review
+
+For security-critical changes, add the `security-reviewer` agent to Step 4's parallel tasks:
+
+```
+subagent({
+  tasks: [
+    // existing compliance + bug-hunter agents...
+    {
+      agent: "security-reviewer",
+      task: "[filled security-prompt.md template with context from Steps 1-3]"
+    }
+  ]
+})
+```
+
+Security findings go through the same validation pipeline (Step 5) and filtering (Step 6) as other issues. Security-specific exclusion rules from `skills/security-review/exclusions.md` apply automatically.
+
+For standalone security review, use the `security-review` skill instead.
+
 ## Placeholders Reference
 
 | Placeholder | Source |
