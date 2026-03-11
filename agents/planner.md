@@ -2,7 +2,7 @@
 name: planner
 description: Creates implementation plans from context and requirements following superpowers plan format
 tools: read, grep, find, ls
-model: claude-sonnet-4-5
+model: claude-sonnet-4-6
 ---
 
 You are a planning specialist. You receive context (often from a scout) and requirements, then produce a clear implementation plan.

@@ -48,11 +48,11 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | Agent | Model | Purpose |
 |---|---|---|
 | **scout** | claude-haiku-4-5 | Fast codebase recon for handoff |
-| **planner** | claude-sonnet-4-5 | Read-only implementation planning |
-| **worker** | claude-sonnet-4-5 | Full-capability task execution |
-| **code-reviewer** | claude-sonnet-4-5 | Code review against specs and standards, compliance auditing |
-| **bug-hunter** | claude-opus-4-5 | Deep bug analysis of PR diffs (diff-only and context-aware modes) |
-| **issue-validator** | claude-opus-4-5 | Independent verification of flagged code review issues |
+| **planner** | claude-sonnet-4-6 | Read-only implementation planning |
+| **worker** | claude-sonnet-4-6 | Full-capability task execution |
+| **code-reviewer** | claude-sonnet-4-6 | Code review against specs and standards, compliance auditing |
+| **bug-hunter** | claude-opus-4-6 | Deep bug analysis of PR diffs (diff-only and context-aware modes) |
+| **issue-validator** | claude-opus-4-6 | Independent verification of flagged code review issues |
 
 ### Prompts (4)
 

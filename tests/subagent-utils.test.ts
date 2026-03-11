@@ -30,9 +30,9 @@ describe("buildAgentArgs", () => {
   });
 
   it("includes both model and tools", () => {
-    const args = buildAgentArgs({ model: "claude-sonnet-4-5", tools: ["bash", "read"] });
+    const args = buildAgentArgs({ model: "claude-sonnet-4-6", tools: ["bash", "read"] });
     expect(args).toContain("--model");
-    expect(args).toContain("claude-sonnet-4-5");
+    expect(args).toContain("claude-sonnet-4-6");
     expect(args).toContain("--tools");
     expect(args).toContain("bash,read");
   });
@@ -141,8 +141,8 @@ describe("formatUsageStats", () => {
 
   it("formats usage with model", () => {
     const usage = { ...emptyUsage(), input: 1000, output: 500, turns: 3 };
-    const result = formatUsageStats(usage, "claude-sonnet-4-5");
+    const result = formatUsageStats(usage, "claude-sonnet-4-6");
     expect(result).toContain("3 turns");
-    expect(result).toContain("claude-sonnet-4-5");
+    expect(result).toContain("claude-sonnet-4-6");
   });
 });

@@ -7,8 +7,8 @@ The code review pipeline uses three model tiers. Each tier maps to a role in the
 | Role | Default Model | Agent | Pipeline Steps |
 |------|--------------|-------|----------------|
 | **fast** (pre-flight, discovery) | `claude-haiku-4-5` | scout | Steps 1, 2 |
-| **standard** (compliance, summary) | `claude-sonnet-4-5` | code-reviewer | Steps 3, 4a-b |
-| **reasoning** (bugs, validation) | `claude-opus-4-5` | bug-hunter, issue-validator | Steps 4c-d, 5 |
+| **standard** (compliance, summary) | `claude-sonnet-4-6` | code-reviewer | Steps 3, 4a-b |
+| **reasoning** (bugs, validation) | `claude-opus-4-6` | bug-hunter, issue-validator | Steps 4c-d, 5 |
 
 ## How to Override Models
 
@@ -125,7 +125,7 @@ No config needed — bundled agents use Claude models.
 
 ### Mixed (Cost-Optimized)
 ```json
-{ "models": { "fast": "gemini-2.5-flash", "standard": "claude-sonnet-4-5", "reasoning": "claude-opus-4-5" } }
+{ "models": { "fast": "gemini-2.5-flash", "standard": "claude-sonnet-4-6", "reasoning": "claude-opus-4-6" } }
 ```
 
 ### Local Models
