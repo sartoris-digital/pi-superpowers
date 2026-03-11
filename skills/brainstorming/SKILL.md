@@ -130,6 +130,16 @@ After the spec review loop passes, ask the user to review the written spec befor
 
 Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
 
+**Planning Choice:**
+
+After the spec is approved, offer the user a choice:
+> "Ready to create the implementation plan. Would you like:
+> - **A) Standard plan** — direct plan generation via writing-plans
+> - **B) Consensus plan** — planner → architect → critic review loop via ralplan"
+
+If user chooses A → invoke `writing-plans` skill (existing behavior).
+If user chooses B → invoke `ralplan` skill instead.
+
 **Implementation:**
 
 - Invoke the writing-plans skill to create a detailed implementation plan
