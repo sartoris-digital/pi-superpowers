@@ -18,13 +18,13 @@ Orchestrate specialized agents across model tiers to review code changes with hi
 ## Pipeline Overview
 
 ```
-Step 1: Pre-flight (scout/haiku) ──→ stop if PR is closed/draft/already-reviewed
-Step 2: Config discovery (scout/haiku) ──→ find project config files
-Step 3: Summarize changes (code-reviewer/sonnet)
+Step 1: Pre-flight (scout/fast tier) ──→ stop if PR is closed/draft/already-reviewed
+Step 2: Config discovery (scout/fast tier) ──→ find project config files
+Step 3: Summarize changes (code-reviewer/standard tier)
 Step 4: Parallel review ──→ 4 agents simultaneously:
-  ├── code-reviewer (sonnet) × 2: compliance audit
-  ├── bug-hunter (opus): diff-only scan
-  └── bug-hunter (opus): context-aware scan
+  ├── code-reviewer (standard tier) × 2: compliance audit
+  ├── bug-hunter (reasoning tier): diff-only scan
+  └── bug-hunter (reasoning tier): context-aware scan
 Step 5: Validate ──→ 1 issue-validator per issue (parallel)
 Step 6: Filter ──→ drop unvalidated issues
 Step 7: Report ──→ output summary
@@ -34,7 +34,7 @@ Step 7: Report ──→ output summary
 
 ### Step 1: Pre-flight Check
 
-Dispatch `scout` agent (haiku) to check if any of these are true:
+Dispatch `scout` agent (fast tier) to check if any of these are true:
 - The PR is closed
 - The PR is a draft
 - The PR does not need review (automated PR, trivial/obvious change)
@@ -43,6 +43,7 @@ Dispatch `scout` agent (haiku) to check if any of these are true:
 ```
 subagent({
   agent: "scout",
+  tier: "fast",
   task: "Pre-flight check for code review. Run these commands and report findings:\n\n1. `git log --oneline -5` to see recent commits\n2. Check if this is a draft or closed PR (if applicable)\n3. Check if any previous review comments exist\n\nReturn: { proceed: true/false, reason: '...' }"
 })
 ```
@@ -53,22 +54,24 @@ subagent({
 
 ### Step 2: Config Discovery
 
-Dispatch `scout` agent (haiku) to find project configuration files:
+Dispatch `scout` agent (fast tier) to find project configuration files:
 
 ```
 subagent({
   agent: "scout",
+  tier: "fast",
   task: "Find all project configuration files that contain coding rules or standards. Look for:\n- CLAUDE.md files (root and in directories containing modified files)\n- AGENTS.md files\n- .pi/ config directories\n- .editorconfig, .eslintrc, tsconfig.json (if they contain custom rules)\n\nFor each file found, return its path and a 1-line summary of what rules it contains.\n\nReturn as JSON: [{ path: '...', summary: '...' }]"
 })
 ```
 
 ### Step 3: Summarize Changes
 
-Dispatch `code-reviewer` agent (sonnet) to produce a change summary:
+Dispatch `code-reviewer` agent (standard tier) to produce a change summary:
 
 ```
 subagent({
   agent: "code-reviewer",
+  tier: "standard",
   task: "Summarize the changes in this PR/branch.\n\nRun:\n```\ngit diff {BASE_SHA}..{HEAD_SHA} --stat\ngit log --oneline {BASE_SHA}..{HEAD_SHA}\ngit diff {BASE_SHA}..{HEAD_SHA}\n```\n\nReturn a structured summary:\n- What changed (files, modules affected)\n- Why (infer intent from commit messages and code)\n- Scope (small fix, feature, refactor, etc.)\n- Risk areas (files with complex changes)"
 })
 ```
@@ -84,18 +87,22 @@ subagent({
   tasks: [
     {
       agent: "code-reviewer",
+      tier: "standard",
       task: "MODE: compliance-audit\n\nPR Title: {PR_TITLE}\nPR Description: {PR_DESCRIPTION}\n\nAudit the FIRST HALF of changed files for compliance with project config rules.\n\nConfig files:\n{CONFIG_FILE_CONTENTS}\n\nDiff to audit:\n```\ngit diff {BASE_SHA}..{HEAD_SHA} -- {FIRST_HALF_FILES}\n```\n\nReturn JSON array of violations. See your Compliance Audit Mode instructions."
     },
     {
       agent: "code-reviewer",
+      tier: "standard",
       task: "MODE: compliance-audit\n\nPR Title: {PR_TITLE}\nPR Description: {PR_DESCRIPTION}\n\nAudit the SECOND HALF of changed files for compliance with project config rules.\n\nConfig files:\n{CONFIG_FILE_CONTENTS}\n\nDiff to audit:\n```\ngit diff {BASE_SHA}..{HEAD_SHA} -- {SECOND_HALF_FILES}\n```\n\nReturn JSON array of violations. See your Compliance Audit Mode instructions."
     },
     {
       agent: "bug-hunter",
+      tier: "reasoning",
       task: "MODE: diff-only\n\nPR Title: {PR_TITLE}\nPR Description: {PR_DESCRIPTION}\n\nScan this diff for bugs. Focus ONLY on the diff itself — do not read extra context files.\n\n```\ngit diff {BASE_SHA}..{HEAD_SHA}\n```\n\nReturn JSON array of issues. Refer to false-positive exclusion list."
     },
     {
       agent: "bug-hunter",
+      tier: "reasoning",
       task: "MODE: context-aware\n\nPR Title: {PR_TITLE}\nPR Description: {PR_DESCRIPTION}\n\nAnalyze the introduced code in context of the surrounding codebase. You may read referenced files, check types, follow imports.\n\n```\ngit diff {BASE_SHA}..{HEAD_SHA}\n```\n\nReturn JSON array of issues. Refer to false-positive exclusion list."
     }
   ]
@@ -109,14 +116,14 @@ subagent({
 For each issue found in Step 4, dispatch a parallel `issue-validator` subagent.
 
 Use the template from `issue-validator-prompt.md`:
-- **Bug/logic/security issues** → dispatch with opus model (issue-validator default)
-- **Compliance issues** → you may override to sonnet if the validation is straightforward
+- **Bug/logic/security issues** → dispatch with reasoning tier (issue-validator default)
+- **Compliance issues** → you may override to standard tier if the validation is straightforward
 
 ```
 subagent({
   tasks: [
-    { agent: "issue-validator", task: "[filled template for issue 1]" },
-    { agent: "issue-validator", task: "[filled template for issue 2]" },
+    { agent: "issue-validator", tier: "reasoning", task: "[filled template for issue 1]" },
+    { agent: "issue-validator", tier: "reasoning", task: "[filled template for issue 2]" },
     ...
   ]
 })
@@ -165,7 +172,7 @@ Output a summary to the terminal:
 No issues found. Checked for bugs, security issues, and project config compliance.
 
 **Reviewed:** {FILE_COUNT} files, {LINE_COUNT} lines changed
-**Agents used:** 2× compliance auditor (sonnet), 2× bug hunter (opus)
+**Agents used:** 2× compliance auditor (standard tier), 2× bug hunter (reasoning tier)
 ```
 
 ## Model Configuration
@@ -191,13 +198,13 @@ The pipeline defaults to Claude models but supports any model provider Pi can us
 
 **When config file exists:** In Step 1 (pre-flight), the scout also checks for `.pi/code-review.json`. If found, the orchestrating agent reads the model overrides and adjusts dispatch notes for each subsequent subagent task. The config file takes precedence over bundled agent defaults but NOT over project-level agent overrides (which are resolved by Pi's agent discovery before the subagent runs).
 
-**Tier mapping:**
+**Tier mapping (configured in `.pi/superpowers.json`):**
 
-| Tier | Agents | Pipeline Steps |
-|------|--------|----------------|
-| `fast` | scout | Steps 1, 2 |
-| `standard` | code-reviewer | Steps 3, 4a-b |
-| `reasoning` | bug-hunter, issue-validator | Steps 4c-d, 5 |
+| Tier | Default Model | Agents | Pipeline Steps |
+|------|--------------|--------|----------------|
+| `fast` | claude-haiku-4-5 | scout | Steps 1, 2 |
+| `standard` | claude-sonnet-4-6 | code-reviewer | Steps 3, 4a-b |
+| `reasoning` | claude-opus-4-6 | bug-hunter, issue-validator | Steps 4c-d, 5 |
 
 ## Adapting the Pipeline
 
@@ -228,6 +235,7 @@ subagent({
     // existing compliance + bug-hunter agents...
     {
       agent: "security-reviewer",
+      tier: "reasoning",
       task: "[filled security-prompt.md template with context from Steps 1-3]"
     }
   ]

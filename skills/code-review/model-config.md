@@ -1,3 +1,5 @@
+> **Unified config:** Model overrides now use `.pi/superpowers.json` (applies to ALL agent dispatch, not just code review). The `.pi/code-review.json` format is still supported as a fallback. See below for details.
+
 # Model Configuration for Code Review
 
 The code review pipeline uses three model tiers. Each tier maps to a role in the pipeline. The defaults use Claude models, but you can override them for any provider Pi supports.

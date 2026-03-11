@@ -19,10 +19,10 @@ Perform a multi-agent security audit of code changes to identify exploitable vul
 ## Pipeline Overview
 
 ```
-Step 1: Context gathering (scout/haiku) → tech stack, changed files, security patterns
-Step 2: Security audit (security-reviewer/opus) → 3-phase analysis, JSON findings
+Step 1: Context gathering (scout/fast tier) → tech stack, changed files, security patterns
+Step 2: Security audit (security-reviewer/reasoning tier) → 3-phase analysis, JSON findings
 Step 3: Hard filter (orchestrator) → exclude known false-positive categories
-Step 4: Validate findings (issue-validator/opus × N) → independently verify each finding
+Step 4: Validate findings (issue-validator/reasoning tier × N) → independently verify each finding
 Step 5: Report → structured output with severity and confidence
 ```
 
@@ -30,22 +30,24 @@ Step 5: Report → structured output with severity and confidence
 
 ### Step 1: Context Gathering
 
-Dispatch `scout` agent (haiku) to gather context:
+Dispatch `scout` agent (fast tier) to gather context:
 
 ```
 subagent({
   agent: "scout",
+  tier: "fast",
   task: "Security review context gathering. Investigate:\n\n1. `git diff --stat {BASE_SHA}..{HEAD_SHA}` — what files changed\n2. `git log --oneline {BASE_SHA}..{HEAD_SHA}` — commit messages for intent\n3. Look for security-related files: auth modules, middleware, input validators, crypto usage\n4. Check for `.pi/security-instructions.txt` and `.pi/security-exclusions.txt`\n5. Identify the tech stack and frameworks in use\n\nReturn:\n- Changed files list with line counts\n- Tech stack summary\n- Security-relevant patterns found in codebase\n- Custom instructions/exclusions if found"
 })
 ```
 
 ### Step 2: Security Audit
 
-Dispatch `security-reviewer` agent (opus) with the full prompt from `security-prompt.md`:
+Dispatch `security-reviewer` agent (reasoning tier) with the full prompt from `security-prompt.md`:
 
 ```
 subagent({
   agent: "security-reviewer",
+  tier: "reasoning",
   task: "[filled security-prompt.md template with context from Step 1]"
 })
 ```
@@ -79,6 +81,7 @@ subagent({
   tasks: [
     {
       agent: "issue-validator",
+      tier: "reasoning",
       task: "Validate this SECURITY finding.\n\nPR Title: {PR_TITLE}\nPR Description: {PR_DESCRIPTION}\n\nFlagged Issue:\n- File: {FILE}\n- Line: {LINE}\n- Severity: {SEVERITY}\n- Category: {CATEGORY}\n- Description: {DESCRIPTION}\n- Exploit scenario: {EXPLOIT_SCENARIO}\n- Confidence: {CONFIDENCE}\n\nYour job: Verify this security vulnerability is real and exploitable. Read the actual code, trace the data flow, check if sanitization exists elsewhere. Verify the exploit scenario is feasible.\n\nReturn JSON: { validated: true/false, confidence: 'high'/'medium'/'low', reasoning: '...', evidence: '...' }"
     },
     ...
@@ -136,13 +139,14 @@ No security vulnerabilities found.
 
 Follows the same tier system as code-review. See `skills/code-review/model-config.md`.
 
-| Tier | Agent | Default Model |
-|------|-------|---------------|
-| fast | scout | claude-haiku-4-5 |
-| reasoning | security-reviewer | claude-opus-4-6 |
-| reasoning | issue-validator | claude-opus-4-6 |
+**Tier mapping (configured in `.pi/superpowers.json`):**
 
-Override via project agent files in `.pi/agents/` or `.pi/code-review.json`.
+| Tier | Default Model | Agent |
+|------|--------------|-------|
+| `fast` | claude-haiku-4-5 | scout |
+| `reasoning` | claude-opus-4-6 | security-reviewer, issue-validator |
+
+Override via project agent files in `.pi/agents/` or `.pi/superpowers.json` (falls back to `.pi/code-review.json`).
 
 ## Integration with Code Review
 
@@ -156,7 +160,7 @@ The security review can run standalone or as part of the code-review pipeline.
 subagent({
   tasks: [
     // existing code-review agents...
-    { agent: "security-reviewer", task: "[security audit prompt]" }
+    { agent: "security-reviewer", tier: "reasoning", task: "[security audit prompt]" }
   ]
 })
 ```
