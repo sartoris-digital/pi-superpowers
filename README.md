@@ -23,7 +23,7 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | **bootstrap** | Injects the using-superpowers skill into every Pi session via the `context` event |
 | **subagent** | Registers a `subagent` tool for delegating tasks to specialized agents |
 
-### Skills (15)
+### Skills (16)
 
 | Skill | Description |
 |---|---|
@@ -37,13 +37,14 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | **systematic-debugging** | Four-phase root cause debugging methodology |
 | **verification-before-completion** | Evidence-based completion claims |
 | **code-review** | Multi-agent code review pipeline with parallel review and validation |
+| **security-review** | Multi-agent security audit with vulnerability validation and false-positive filtering |
 | **requesting-code-review** | Dispatch quick single-agent code review after task completion |
 | **receiving-code-review** | How to respond to review feedback |
 | **using-git-worktrees** | Isolated workspaces for feature branches |
 | **finishing-a-development-branch** | End-of-work workflow (merge/PR/preserve/discard) |
 | **writing-skills** | How to create new skills |
 
-### Agents (6)
+### Agents (7)
 
 | Agent | Model | Purpose |
 |---|---|---|
@@ -52,9 +53,10 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | **worker** | claude-sonnet-4-6 | Full-capability task execution |
 | **code-reviewer** | claude-sonnet-4-6 | Code review against specs and standards, compliance auditing |
 | **bug-hunter** | claude-opus-4-6 | Deep bug analysis of PR diffs (diff-only and context-aware modes) |
+| **security-reviewer** | claude-opus-4-6 | 3-phase security audit with vulnerability assessment and exploit scenarios |
 | **issue-validator** | claude-opus-4-6 | Independent verification of flagged code review issues |
 
-### Prompts (4)
+### Prompts (5)
 
 | Command | Description |
 |---|---|
@@ -62,6 +64,7 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | `/write-plan` | Create an implementation plan |
 | `/execute-plan` | Execute an existing plan |
 | `/code-review` | Run a multi-agent code review on a PR or branch diff |
+| `/security-review` | Run a security-focused review to identify exploitable vulnerabilities |
 
 ## Subagent Usage
 
@@ -123,6 +126,24 @@ The pipeline defaults to Claude models but supports any provider Pi can use. Ove
 3. **User agent overrides** — Place agent files in `~/.pi/agent/agents/` for cross-project defaults
 
 See `skills/code-review/model-config.md` for full configuration documentation with examples for Claude, GPT, Gemini, and local models.
+
+## Security Review
+
+The `/security-review` command runs a multi-agent security audit focused on exploitable vulnerabilities with minimal false positives:
+
+```
+Context gathering (scout/haiku) → Security audit (security-reviewer/opus)
+→ Hard filter (exclusion rules) → Validate each finding (issue-validator/opus) → Report
+```
+
+Features:
+- 3-phase methodology: context research, comparative analysis, vulnerability assessment
+- Hard exclusion rules filter out known false-positive categories (DOS, rate limiting, etc.)
+- Independent validation of each finding before reporting
+- Customizable via `.pi/security-instructions.txt` and `.pi/security-exclusions.txt`
+- Can run standalone or integrated into the code-review pipeline
+
+See `skills/security-review/SKILL.md` for full pipeline documentation.
 
 ## Credits
 

@@ -13,6 +13,7 @@ const EXPECTED_SKILLS = [
   "finishing-a-development-branch",
   "receiving-code-review",
   "requesting-code-review",
+  "security-review",
   "subagent-driven-development",
   "systematic-debugging",
   "test-driven-development",
@@ -24,7 +25,7 @@ const EXPECTED_SKILLS = [
 ];
 
 describe("skills", () => {
-  it("has all 15 expected skill directories", () => {
+  it("has all 16 expected skill directories", () => {
     const dirs = fs
       .readdirSync(SKILLS_DIR, { withFileTypes: true })
       .filter((d) => d.isDirectory())
