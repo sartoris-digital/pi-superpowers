@@ -27,7 +27,16 @@ For each task:
 1. Mark as in_progress
 2. Follow each step exactly (plan has bite-sized steps)
 3. Run verifications as specified
-4. Mark as completed
+4. Dispatch architect for verification:
+   ```
+   subagent({
+     agent: "architect",
+     task: "MODE: verification\n\nTask: [task N description]\nClaimed: Task complete.\n\nVerify: [specific verification steps from plan]",
+     tier: "[based on task complexity]"
+   })
+   ```
+5. If architect returns "verified" → mark as completed
+6. If architect returns "insufficient" or "failed" → address gaps, re-verify
 
 ### Step 3: Complete Development
 
