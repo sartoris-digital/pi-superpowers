@@ -180,16 +180,45 @@ Only high-signal, independently validated issues are reported. See `skills/code-
 
 ### Model Configuration
 
-The pipeline defaults to Claude models but supports any provider Pi can use. Override models via:
+The pipeline defaults to Claude models but supports any provider Pi can use. All configuration lives in a single `.pi/superpowers.json` file:
 
-1. **Project agent overrides** — Create `.pi/agents/<agent>.md` with your preferred `model:` in frontmatter
-2. **Config file** — Create `.pi/code-review.json` with tier-based overrides:
-   ```json
-   { "models": { "fast": "gpt-4.1-mini", "standard": "gpt-4.1-mini", "reasoning": "gpt-4.1" } }
-   ```
-3. **User agent overrides** — Place agent files in `~/.pi/agent/agents/` for cross-project defaults
+```json
+{
+  "models": {
+    "fast": "claude-haiku-4-5",
+    "standard": "claude-sonnet-4-6",
+    "reasoning": "claude-opus-4-6"
+  },
+  "routing": {
+    "enabled": true,
+    "defaultTier": "standard",
+    "agentTierOverrides": {
+      "scout": "fast",
+      "bug-hunter": "reasoning",
+      "security-reviewer": "reasoning",
+      "issue-validator": "reasoning"
+    }
+  },
+  "persistence": {
+    "maxIterations": 50,
+    "staleTimeout": 14400
+  },
+  "delegation": {
+    "audit": true,
+    "enforce": false
+  }
+}
+```
 
-See `skills/code-review/model-config.md` for full configuration documentation with examples for Claude, GPT, Gemini, and local models.
+**Config sections:**
+- **models** — Map each tier to a model. Swap in GPT, Gemini, or local models here.
+- **routing** — Control tier resolution: `defaultTier` for untagged agents, `agentTierOverrides` for per-agent tier assignments.
+- **persistence** — Limits for continuation loops (ralph/autopilot): max iterations and stale timeout (seconds).
+- **delegation** — Audit logging for direct source file writes; `enforce` blocks them entirely.
+
+**Override priority:** Project agent overrides (`.pi/agents/<agent>.md` with `model:` in frontmatter) take precedence over config file settings. User agent overrides (`~/.pi/agent/agents/`) serve as cross-project defaults. Falls back to `.pi/code-review.json` if `.pi/superpowers.json` is not found.
+
+See `skills/code-review/model-config.md` for provider-specific examples (Claude, GPT, Gemini, local models).
 
 ## Security Review
 
