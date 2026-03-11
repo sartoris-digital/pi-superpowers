@@ -1,0 +1,106 @@
+# @sartoris/pi-superpowers
+
+Superpowers skills framework for [Pi](https://pi.dev) — TDD, debugging, collaboration patterns, and proven development techniques.
+
+A full English port of [obra/superpowers](https://github.com/obra/superpowers) v5.0.0 for the Pi coding agent platform.
+
+## Installation
+
+```bash
+# From npm
+pi install npm:@sartoris/pi-superpowers
+
+# From git
+pi install github:sartoris/pi-superpowers
+```
+
+## What's Included
+
+### Extensions
+
+| Extension | Purpose |
+|---|---|
+| **bootstrap** | Injects the using-superpowers skill into every Pi session via the `context` event |
+| **subagent** | Registers a `subagent` tool for delegating tasks to specialized agents |
+
+### Skills (14)
+
+| Skill | Description |
+|---|---|
+| **using-superpowers** | Meta-skill: when and how to invoke other skills |
+| **brainstorming** | Design-first workflow with collaborative question-driven design |
+| **writing-plans** | Create detailed implementation plans with atomic tasks |
+| **executing-plans** | Execute implementation plans task by task |
+| **subagent-driven-development** | Dispatch subagents per task with two-stage review |
+| **dispatching-parallel-agents** | Parallel agent dispatch for independent subsystems |
+| **test-driven-development** | Strict Red-Green-Refactor TDD enforcement |
+| **systematic-debugging** | Four-phase root cause debugging methodology |
+| **verification-before-completion** | Evidence-based completion claims |
+| **requesting-code-review** | Dispatch code review after task completion |
+| **receiving-code-review** | How to respond to review feedback |
+| **using-git-worktrees** | Isolated workspaces for feature branches |
+| **finishing-a-development-branch** | End-of-work workflow (merge/PR/preserve/discard) |
+| **writing-skills** | How to create new skills |
+
+### Agents (4)
+
+| Agent | Model | Purpose |
+|---|---|---|
+| **scout** | claude-haiku-4-5 | Fast codebase recon for handoff |
+| **planner** | claude-sonnet-4-5 | Read-only implementation planning |
+| **worker** | claude-sonnet-4-5 | Full-capability task execution |
+| **code-reviewer** | claude-sonnet-4-5 | Code review against specs and standards |
+
+### Prompts (3)
+
+| Command | Description |
+|---|---|
+| `/brainstorm` | Start a brainstorming session |
+| `/write-plan` | Create an implementation plan |
+| `/execute-plan` | Execute an existing plan |
+
+## Subagent Usage
+
+The `subagent` tool supports three modes:
+
+**Single agent:**
+```json
+{ "agent": "worker", "task": "implement user authentication" }
+```
+
+**Parallel (independent tasks, up to 8 tasks / 4 concurrent):**
+```json
+{ "tasks": [
+  { "agent": "worker", "task": "fix auth module" },
+  { "agent": "worker", "task": "fix payment module" }
+]}
+```
+
+**Chain (sequential handoff with `{previous}` placeholder):**
+```json
+{ "chain": [
+  { "agent": "scout", "task": "find code related to auth" },
+  { "agent": "planner", "task": "plan changes using {previous}" },
+  { "agent": "worker", "task": "implement: {previous}" }
+]}
+```
+
+## Agent Customization
+
+Agents are discovered from three sources (highest priority first):
+
+1. **Project agents** — `.pi/agents/` in your project directory
+2. **User agents** — `~/.pi/agent/agents/`
+3. **Bundled agents** — shipped with this package
+
+Override any bundled agent by creating a `.md` file with the same `name` in your project or user agents directory.
+
+## Credits
+
+- [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent — original skills framework
+- [pi-mono subagent example](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent/examples/extensions/subagent) by Mario Zechner — subagent extension architecture
+- [weiping/pi-superpowers](https://github.com/weiping/pi-superpowers) — reference for Pi extension patterns
+
+## License
+
+MIT
