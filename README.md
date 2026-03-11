@@ -11,7 +11,7 @@ A full English port of [obra/superpowers](https://github.com/obra/superpowers) v
 pi install npm:@sartoris/pi-superpowers
 
 # From git
-pi install github:sartoris/pi-superpowers
+pi install github:sartoris-digital/pi-superpowers
 ```
 
 ## What's Included
