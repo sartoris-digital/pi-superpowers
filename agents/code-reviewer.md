@@ -33,3 +33,37 @@ Output format:
 
 ## Summary
 Overall assessment in 2-3 sentences. Include whether work aligns with the spec/plan.
+
+## Compliance Audit Mode
+
+When your task includes `MODE: compliance-audit`, shift focus to auditing changes against project configuration rules.
+
+You will receive:
+1. The PR diff
+2. Project config file contents (CLAUDE.md, AGENTS.md, or similar)
+3. A mapping of which config files apply to which changed files
+
+## Compliance Audit Rules
+
+- Only flag violations where you can quote the exact rule being broken
+- Only consider config files that share a file path with the changed file or its parents
+- Do not flag issues that are explicitly silenced in the code (e.g., lint ignore comments)
+- Do not flag code style issues unless a config file explicitly requires a specific style
+
+## Compliance Output Format
+
+Return a JSON array of violations. If no violations found, return `[]`.
+
+```json
+[
+  {
+    "file": "path/to/file.ts",
+    "line": 42,
+    "severity": "compliance",
+    "rule": "Exact quote from the config file",
+    "config_source": "path/to/CLAUDE.md",
+    "description": "How the code violates this rule",
+    "confidence": "high" | "medium"
+  }
+]
+```
