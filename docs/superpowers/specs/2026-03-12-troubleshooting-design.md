@@ -6,6 +6,14 @@ A new `/troubleshoot` command that accepts a bug description, error logs, and/or
 
 **Core principle:** Distribute the systematic-debugging methodology across specialized agents running in parallel for faster, higher-signal diagnosis.
 
+## When to Use
+
+- When `/troubleshoot` prompt is invoked
+- When a user describes a bug and asks for help diagnosing or fixing it
+- When a user pastes an error log or stack trace and wants to understand the root cause
+- After a test failure that isn't immediately obvious
+- When a bug involves multiple files or systems and needs parallel investigation
+
 ## Input Handling
 
 The command accepts any combination of:
@@ -114,7 +122,7 @@ subagent({
 ```json
 {
   "hypothesis": "Description of suspected root cause",
-  "confidence": 0.85,
+  "confidence": "high|medium|low",
   "evidence": ["file.ts:42 — null check missing", "git log shows field removed in abc123"],
   "affected_files": ["src/auth/login.ts", "src/auth/session.ts"],
   "suggested_fix": "Brief description of fix approach"
@@ -132,6 +140,7 @@ The architect merges all investigation outputs:
 - Investigators agree (or one has clearly stronger evidence) → unified diagnosis
 - Genuine disagreement with comparable evidence → architect picks most likely, notes alternatives
 - Architect can't resolve (confidence: low) → escalate to user with both hypotheses
+- Only one investigator returns a hypothesis (others found nothing) → architect validates the single hypothesis rather than attempting to merge
 
 ```
 subagent({
@@ -185,11 +194,13 @@ On user approval, dispatch `worker` agent with:
   6. Self-review changes
   7. Commit with descriptive message
 
+**When TDD reproduction is not feasible** (UI-only bugs, timing/race conditions, environment-specific issues): the worker should document why an automated reproduction test is not possible, apply the fix, add any feasible partial tests (e.g., unit tests for the fixed logic path), and include a manual verification step in the notes.
+
 ```
 subagent({
   agent: "worker",
   tier: "standard",
-  task: "Fix this bug using TDD.\n\nDiagnosis:\n{DIAGNOSIS}\n\nEvidence:\n{EVIDENCE}\n\n1. Write a failing test that reproduces the bug\n2. Verify it fails\n3. Implement the minimal fix\n4. Verify the test passes\n5. Run full test suite\n6. Self-review\n7. Commit\n\nReturn: { status: 'DONE'|'BLOCKED', files_changed: [], test_added: '', commit_sha: '', notes: '' }"
+  task: "Fix this bug using TDD.\n\nDiagnosis:\n{DIAGNOSIS}\n\nEvidence:\n{EVIDENCE}\n\n1. Write a failing test that reproduces the bug\n2. Verify it fails\n3. Implement the minimal fix\n4. Verify the test passes\n5. Run full test suite\n6. Self-review\n7. Commit\n\nIf the bug cannot be reproduced as an automated test (UI-only, timing, environment-specific), document why, apply the fix, add any feasible partial tests, and describe manual verification steps.\n\nReturn: { status: 'DONE'|'BLOCKED', files_changed: [], test_added: '', commit_sha: '', notes: '' }"
 })
 ```
 
@@ -199,7 +210,7 @@ subagent({
 subagent({
   agent: "architect",
   tier: "reasoning",
-  task: "Verify this bug fix.\n\nOriginal diagnosis:\n{DIAGNOSIS}\n\nChanges made:\n{FIX_SUMMARY}\n\nCheck:\n1. Fix addresses the identified root cause (not just symptoms)\n2. Regression test is meaningful and would catch recurrence\n3. No unintended side effects\n4. All tests pass\n\nReturn: { verified: true/false, reasoning: '...' }"
+  task: "Verify this bug fix.\n\nOriginal diagnosis:\n{DIAGNOSIS}\n\nChanges made:\n{FIX_SUMMARY}\n\nCheck:\n1. Fix addresses the identified root cause (not just symptoms)\n2. Regression test is meaningful and would catch recurrence\n3. No unintended side effects\n4. All tests pass\n\nReturn: { verified: true/false, confidence: 'high|medium|low', reasoning: '...' }"
 })
 ```
 
@@ -211,9 +222,28 @@ If verification fails → report to user with explanation. Don't loop automatica
 |------|--------|---------|
 | `skills/troubleshooting/SKILL.md` | Create | Main skill — full pipeline orchestration instructions |
 | `prompts/troubleshoot.md` | Create | Entry point prompt for `/troubleshoot` command |
-| `tests/skills.test.ts` | Modify | Add "troubleshooting" to EXPECTED_SKILLS, update count to 21 |
+| `agents/bug-hunter.md` | Modify | Add `root-cause-analysis` and `pattern-analysis` modes alongside existing `diff-only` and `context-aware` modes |
+| `tests/skills.test.ts` | Modify | Add `"troubleshooting"` to the EXPECTED_SKILLS array (maintaining alphabetical order) and update the test description from `"has all 20 expected skill directories"` to `"has all 21 expected skill directories"` |
 
-**No new agents needed.** Reuses: scout, bug-hunter, researcher, vision, architect, worker.
+**SKILL.md frontmatter:**
+```yaml
+---
+name: troubleshooting
+description: Use when diagnosing bugs using multi-agent parallel investigation
+---
+```
+
+**Prompt file content** (`prompts/troubleshoot.md`):
+```yaml
+---
+description: Troubleshoot a bug using multi-agent diagnosis and fix
+---
+Use the superpowers:troubleshooting skill to diagnose and fix the bug.
+
+Arguments: $@
+```
+
+**No new agents needed.** Reuses: scout, bug-hunter (with new modes), researcher, vision, architect, worker.
 
 **No new extensions needed.** The orchestrating agent handles the pipeline using the existing `subagent` tool.
 
@@ -235,6 +265,45 @@ If verification fails → report to user with explanation. Don't loop automatica
 - **test-driven-development** — the worker agent follows TDD when applying the fix
 - **verification-before-completion** — the architect verification step mirrors this skill's evidence-based approach
 - **code-review** — follows the same multi-agent pipeline pattern (parallel investigation → validation → report)
+
+## Model Configuration
+
+Follows the same tier system as code-review and security-review. All tiers are configurable via `.pi/superpowers.json`:
+
+```json
+{
+  "models": {
+    "fast": "claude-haiku-4-5",
+    "standard": "claude-sonnet-4-6",
+    "reasoning": "claude-opus-4-6"
+  }
+}
+```
+
+Override individual agents via project agent files in `.pi/agents/` (highest priority) or user agent files in `~/.pi/agent/agents/`. See `skills/code-review/model-config.md` for provider-specific examples (Claude, GPT, Gemini, local models).
+
+## Adapting the Pipeline
+
+### Empty or unresolvable input
+
+If the user provides no actionable input (no error text, no valid file paths, no description), the triage step should return an error and the orchestrator should ask the user to provide more detail. Do not proceed to investigation with empty context.
+
+### No affected files identified
+
+If triage cannot identify specific files or modules from the input, investigation proceeds with the full codebase in scope. The bug-hunters should use the error text, stack trace, or description to search broadly. This is slower but still valid.
+
+### No test framework available
+
+If the project has no test infrastructure, the worker should:
+1. Skip the "write a failing test" step
+2. Apply the fix directly
+3. Verify the fix manually (run the application, check the behavior)
+4. Document what was verified and how in the commit message
+5. Note the lack of automated testing in the return `notes` field
+
+### Simple bugs (single file, obvious fix)
+
+If triage identifies a single file with a clear error (e.g., typo, missing import, off-by-one), the orchestrator may skip parallel investigation and dispatch a single bug-hunter for root cause analysis. The synthesis step still runs to validate.
 
 ## Red Flags
 
