@@ -60,7 +60,7 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | **planner** | claude-sonnet-4-6 | Read-only implementation planning |
 | **worker** | claude-sonnet-4-6 | Full-capability task execution |
 | **code-reviewer** | claude-sonnet-4-6 | Code review against specs and standards, compliance auditing |
-| **bug-hunter** | claude-opus-4-6 | Deep bug analysis of PR diffs (diff-only and context-aware modes) |
+| **bug-hunter** | claude-opus-4-6 | Deep bug analysis — PR review (diff-only, context-aware) and troubleshooting (root-cause-analysis, pattern-analysis) |
 | **security-reviewer** | claude-opus-4-6 | 3-phase security audit with vulnerability assessment and exploit scenarios |
 | **issue-validator** | claude-opus-4-6 | Independent verification of flagged code review issues |
 | **architect** | claude-opus-4-6 | Plan review and completion verification |
@@ -239,6 +239,29 @@ Features:
 - Can run standalone or integrated into the code-review pipeline
 
 See `skills/security-review/SKILL.md` for full pipeline documentation.
+
+## Troubleshooting
+
+The `/troubleshoot` command orchestrates a multi-agent team to diagnose bugs and (on approval) fix them:
+
+```
+Triage (scout/haiku) → Parallel investigation:
+  ├── bug-hunter (opus): root-cause-analysis
+  ├── bug-hunter (opus): pattern-analysis
+  ├── researcher (sonnet): [conditional] external docs/known issues
+  └── vision (sonnet): [conditional] screenshot analysis
+→ Synthesis (architect/opus) → Diagnosis report → [User approval] → Fix (worker/sonnet) → Verify (architect/opus)
+```
+
+Features:
+- Accepts inline text, error logs, screenshots, and file paths (auto-detected)
+- Distributes the systematic-debugging methodology across parallel agents
+- Conditional agent dispatch — researcher and vision only when needed
+- Architect synthesis resolves conflicting hypotheses with evidence-based tiebreaking
+- TDD fix on approval: failing test → minimal fix → verify → commit
+- Scope hints (`--scope <path>`) to focus investigation
+
+See `skills/troubleshooting/SKILL.md` for full pipeline documentation.
 
 ## Credits
 
