@@ -26,7 +26,7 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | **persistence-engine** | Continuation loops for ralph and autopilot modes |
 | **orchestrator** | Keyword detection, delegation audit, mode reminders |
 
-### Skills (21)
+### Skills (22)
 
 | Skill | Description |
 |---|---|
@@ -44,6 +44,7 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | **verification-before-completion** | Evidence-based completion claims |
 | **code-review** | Multi-agent code review pipeline with parallel review and validation |
 | **security-review** | Multi-agent security audit with vulnerability validation and false-positive filtering |
+| **simplify** | Review changed code for reuse, quality, and efficiency, then fix issues found |
 | **requesting-code-review** | Dispatch quick single-agent code review after task completion |
 | **receiving-code-review** | How to respond to review feedback |
 | **plan** | Unified planning entry point with broad/specific detection |
@@ -71,7 +72,7 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | **vision** | claude-sonnet-4-6 | Visual analysis of screenshots and mockups |
 | **writer** | claude-haiku-4-5 | Documentation, READMEs, changelogs |
 
-### Prompts (10)
+### Prompts (11)
 
 | Command | Description |
 |---|---|
@@ -81,6 +82,7 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | `/code-review` | Run a multi-agent code review on a PR or branch diff |
 | `/security-review` | Run a security-focused review to identify exploitable vulnerabilities |
 | `/troubleshoot` | Diagnose and fix a bug using multi-agent investigation |
+| `/simplify` | Review changed code for reuse, quality, and efficiency, then fix issues |
 | `/cancel` | Cancel active execution mode |
 | `/ecomode` | Toggle token-efficient model routing |
 | `/plan` | Start a planning session |
