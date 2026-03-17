@@ -2,7 +2,7 @@
 
 Superpowers skills framework for [Pi](https://pi.dev) — TDD, debugging, collaboration patterns, and proven development techniques.
 
-A full English port of [obra/superpowers](https://github.com/obra/superpowers) v5.0.0 for the Pi coding agent platform.
+A full English port of [obra/superpowers](https://github.com/obra/superpowers) v5.0.0 for the Pi coding agent platform, extended with skills and agents ported from [oh-my-claudecode](https://github.com/Yeachan-Heo/oh-my-claudecode).
 
 ## Installation
 
@@ -20,13 +20,13 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 
 | Extension | Purpose |
 |---|---|
-| **bootstrap** | Injects the using-superpowers skill into every Pi session via the `context` event |
+| **bootstrap** | Injects the using-superpowers skill into every Pi session via the `before_agent_start` event |
 | **subagent** | Registers a `subagent` tool for delegating tasks to specialized agents |
 | **state-manager** | Persistent state CRUD for execution modes |
 | **persistence-engine** | Continuation loops for ralph and autopilot modes |
 | **orchestrator** | Keyword detection, delegation audit, mode reminders |
 
-### Skills (22)
+### Skills (33)
 
 | Skill | Description |
 |---|---|
@@ -52,27 +52,49 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | **using-git-worktrees** | Isolated workspaces for feature branches |
 | **finishing-a-development-branch** | End-of-work workflow (merge/PR/preserve/discard) |
 | **writing-skills** | How to create new skills |
+| **deep-interview** | Socratic interview with ambiguity scoring — turns vague ideas into crystal-clear specs |
+| **deepsearch** | Thorough codebase search via parallel scout agents |
+| **learner** | Extract hard-won insights from a session into reusable learned skills |
+| **ultraqa** | QA cycling — verify, diagnose, fix, repeat until green (max 5 cycles) |
+| **ai-slop-cleaner** | Regression-safe deletion-first cleanup of AI-generated code |
+| **autopilot** | Full autonomous execution — expand, plan, implement, QA, validate |
+| **ultrawork** | Parallel execution engine with smart model tier routing |
+| **ralph** | PRD-driven persistence loop until all user stories pass |
+| **trace** | Evidence-driven causal tracing with competing hypotheses |
+| **external-context** | Fetch external docs in parallel via document-specialist agents |
+| **deepinit** | Generate hierarchical AGENTS.md documentation across the codebase |
 
-### Agents (14)
+### Agents (25)
 
 | Agent | Model | Purpose |
 |---|---|---|
 | **scout** | claude-haiku-4-5 | Fast codebase recon for handoff |
-| **planner** | claude-sonnet-4-6 | Read-only implementation planning |
+| **explore** | claude-haiku-4-5 | Fast codebase search — find files, patterns, relationships |
+| **writer** | claude-haiku-4-5 | Documentation, READMEs, changelogs (authoring-only) |
+| **planner** | claude-sonnet-4-6 | Read-only implementation planning with TDD ordering |
 | **worker** | claude-sonnet-4-6 | Full-capability task execution |
-| **code-reviewer** | claude-sonnet-4-6 | Code review against specs and standards, compliance auditing |
-| **bug-hunter** | claude-opus-4-6 | Deep bug analysis — PR review (diff-only, context-aware) and troubleshooting (root-cause-analysis, pattern-analysis) |
-| **security-reviewer** | claude-opus-4-6 | 3-phase security audit with vulnerability assessment and exploit scenarios |
-| **issue-validator** | claude-opus-4-6 | Independent verification of flagged code review issues |
-| **architect** | claude-opus-4-6 | Plan review and completion verification |
-| **critic** | claude-opus-4-6 | Adversarial quality review of plans and designs |
-| **designer** | claude-sonnet-4-6 | UI/frontend components, styling, accessibility |
+| **executor** | claude-sonnet-4-6 | Focused implementation — classify, explore, implement, verify |
+| **code-simplifier** | claude-sonnet-4-6 | Refine code structure while preserving behavior |
+| **debugger** | claude-sonnet-4-6 | Root-cause analysis and minimal build fixes |
+| **tracer** | claude-sonnet-4-6 | Evidence-driven causal tracing with competing hypotheses |
+| **verifier** | claude-sonnet-4-6 | Independent completion verification — rejects unproven claims |
+| **test-engineer** | claude-sonnet-4-6 | Test strategy, TDD enforcement, flaky test hardening |
+| **git-master** | claude-sonnet-4-6 | Atomic commits, style detection, safe rebase |
+| **qa-tester** | claude-sonnet-4-6 | Interactive CLI testing via real application execution |
+| **designer** | claude-sonnet-4-6 | UI/frontend — framework-idiomatic, anti-AI-slop design |
+| **document-specialist** | claude-sonnet-4-6 | External docs and reference lookup (local → web) |
 | **researcher** | claude-sonnet-4-6 | External docs and API reference lookup |
-| **scientist** | claude-sonnet-4-6 | Data analysis, hypothesis testing |
+| **scientist** | claude-sonnet-4-6 | Data analysis with Python, structured findings |
 | **vision** | claude-sonnet-4-6 | Visual analysis of screenshots and mockups |
-| **writer** | claude-haiku-4-5 | Documentation, READMEs, changelogs |
+| **code-reviewer** | claude-opus-4-6 | Two-stage review — spec compliance then code quality |
+| **security-reviewer** | claude-opus-4-6 | OWASP Top 10 audit with severity × exploitability × blast radius |
+| **issue-validator** | claude-opus-4-6 | Independent verification of flagged code review issues |
+| **architect** | claude-opus-4-6 | Strategic architecture, debugging, plan review, verification (read-only) |
+| **critic** | claude-opus-4-6 | 5-phase adversarial quality review with self-audit |
+| **analyst** | claude-opus-4-6 | Pre-planning requirements analysis — converts scope to acceptance criteria |
+| **bug-hunter** | claude-opus-4-6 | Deep bug analysis — PR review and root-cause investigation |
 
-### Prompts (11)
+### Prompts (22)
 
 | Command | Description |
 |---|---|
@@ -87,6 +109,17 @@ pi install https://github.com/sartoris-digital/pi-superpowers
 | `/ecomode` | Toggle token-efficient model routing |
 | `/plan` | Start a planning session |
 | `/ralplan` | Start consensus planning with review loop |
+| `/deep-interview` | Socratic interview with ambiguity scoring |
+| `/deepsearch` | Thorough codebase search |
+| `/learner` | Extract learned skills from the current session |
+| `/ultraqa` | QA cycling until all tests pass |
+| `/ai-slop-cleaner` | Clean up AI-generated code slop |
+| `/autopilot` | Full autonomous execution from idea to working code |
+| `/ultrawork` | Parallel execution with smart tier routing |
+| `/ralph` | PRD-driven persistence loop |
+| `/trace` | Evidence-driven causal tracing |
+| `/external-context` | Fetch external documentation in parallel |
+| `/deepinit` | Generate AGENTS.md documentation across the codebase |
 
 ## Subagent Usage
 
@@ -132,9 +165,9 @@ Model tiers map agent capabilities to cost-appropriate models:
 
 | Tier | Default Model | Agents |
 |------|--------------|--------|
-| `fast` | claude-haiku-4-5 | scout, writer |
-| `standard` | claude-sonnet-4-6 | planner, worker, code-reviewer, designer, researcher, scientist, vision |
-| `reasoning` | claude-opus-4-6 | bug-hunter, security-reviewer, issue-validator, architect, critic |
+| `fast` | claude-haiku-4-5 | scout, explore, writer |
+| `standard` | claude-sonnet-4-6 | planner, worker, executor, designer, researcher, scientist, vision, debugger, tracer, verifier, test-engineer, git-master, qa-tester, code-simplifier, document-specialist |
+| `reasoning` | claude-opus-4-6 | bug-hunter, security-reviewer, issue-validator, architect, critic, analyst, code-reviewer |
 
 Override via `.pi/superpowers.json`:
 ```json
@@ -155,10 +188,31 @@ The `executing-plans` skill supports 4 strategies:
 | Autopilot | `--autopilot` | Large plans, hands-off |
 | Ralph | `--ralph` | PRD with user stories |
 
+### Execution Modes
+
+| Mode | Skill | Description |
+|------|-------|-------------|
+| **autopilot** | `autopilot` | Full lifecycle — expand → plan → implement → QA → validate |
+| **ralph** | `ralph` | PRD-driven loop until all stories pass + architect verification |
+| **ultrawork** | `ultrawork` | Parallel execution engine (component used by ralph and autopilot) |
+| **ultraqa** | `ultraqa` | QA cycling — build → test → diagnose → fix → repeat |
+
+### 3-Stage Pipeline
+
+For maximum quality on complex projects:
+
+```
+/deep-interview "vague idea"
+  → Socratic Q&A → spec (ambiguity ≤ 20%)
+  → /ralplan → consensus plan (planner/architect/critic approved)
+  → /autopilot → skips expansion + planning, starts at execution
+```
+
 ### Planning Workflows
 
 - **`/plan`** — Detects broad vs. specific requests, routes to interview or direct planning
 - **`/ralplan`** — Consensus planning: planner → architect → critic review loop
+- **`/deep-interview`** — Socratic interview with mathematical ambiguity scoring
 
 ### State Management
 
@@ -198,9 +252,12 @@ The pipeline defaults to Claude models but supports any provider Pi can use. All
     "defaultTier": "standard",
     "agentTierOverrides": {
       "scout": "fast",
+      "explore": "fast",
       "bug-hunter": "reasoning",
       "security-reviewer": "reasoning",
-      "issue-validator": "reasoning"
+      "issue-validator": "reasoning",
+      "analyst": "reasoning",
+      "code-reviewer": "reasoning"
     }
   },
   "persistence": {
@@ -234,7 +291,7 @@ Context gathering (scout/haiku) → Security audit (security-reviewer/opus)
 ```
 
 Features:
-- 3-phase methodology: context research, comparative analysis, vulnerability assessment
+- OWASP Top 10 checklist with severity × exploitability × blast radius prioritization
 - Hard exclusion rules filter out known false-positive categories (DOS, rate limiting, etc.)
 - Independent validation of each finding before reporting
 - Customizable via `.pi/security-instructions.txt` and `.pi/security-exclusions.txt`
@@ -268,6 +325,7 @@ See `skills/troubleshooting/SKILL.md` for full pipeline documentation.
 ## Credits
 
 - [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent — original skills framework
+- [oh-my-claudecode](https://github.com/Yeachan-Heo/oh-my-claudecode) by Yeachan Heo — agents and skills ported from v4.8.2
 - [pi-mono subagent example](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent/examples/extensions/subagent) by Mario Zechner — subagent extension architecture
 - [weiping/pi-superpowers](https://github.com/weiping/pi-superpowers) — reference for Pi extension patterns
 
