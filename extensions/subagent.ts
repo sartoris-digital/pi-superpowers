@@ -26,6 +26,7 @@ import {
   getFinalOutput,
   formatUsageStats,
   emptyUsage,
+  toolResult,
 } from "./subagent-utils.js";
 import type { Message, UsageStats } from "./subagent-utils.js";
 import * as path from "node:path";
@@ -308,10 +309,7 @@ export default function (pi: ExtensionAPI) {
 
           const agent = findAgent(step.agent);
           if (!agent) {
-            return {
-              content: [{ type: "text" as const, text: `Unknown agent: ${step.agent}` }],
-              details: undefined,
-            };
+            return toolResult(`Unknown agent: ${step.agent}`);
           }
 
           // Substitute {previous} placeholder
@@ -328,13 +326,7 @@ export default function (pi: ExtensionAPI) {
           previousOutput = result.output;
 
           if (!result.success) {
-            return {
-              content: [{
-                type: "text" as const,
-                text: `Chain failed at step "${step.agent}": ${result.error ?? "unknown error"}\n\nOutput so far:\n${previousOutput}`,
-              }],
-              details: undefined,
-            };
+            return toolResult(`Chain failed at step "${step.agent}": ${result.error ?? "unknown error"}\n\nOutput so far:\n${previousOutput}`);
           }
         }
 
@@ -352,34 +344,19 @@ export default function (pi: ExtensionAPI) {
           emptyUsage(),
         );
 
-        return {
-          content: [{
-            type: "text" as const,
-            text: `Chain completed (${chain.length} steps). ${formatUsageStats(totalUsage)}\n\n${lastResult?.output ?? ""}`,
-          }],
-          details: undefined,
-        };
+        return toolResult(`Chain completed (${chain.length} steps). ${formatUsageStats(totalUsage)}\n\n${lastResult?.output ?? ""}`);
       } else if (params.tasks && Array.isArray(params.tasks)) {
         // Parallel mode
         const tasks = params.tasks as Array<{ agent: string; task: string; tier?: string }>;
 
         if (tasks.length > MAX_PARALLEL_TASKS) {
-          return {
-            content: [{
-              type: "text" as const,
-              text: `Too many parallel tasks (${tasks.length}). Maximum is ${MAX_PARALLEL_TASKS}.`,
-            }],
-            details: undefined,
-          };
+          return toolResult(`Too many parallel tasks (${tasks.length}). Maximum is ${MAX_PARALLEL_TASKS}.`);
         }
 
         // Validate all agents exist
         for (const t of tasks) {
           if (!findAgent(t.agent)) {
-            return {
-              content: [{ type: "text" as const, text: `Unknown agent: ${t.agent}` }],
-              details: undefined,
-            };
+            return toolResult(`Unknown agent: ${t.agent}`);
           }
         }
 
@@ -416,21 +393,12 @@ export default function (pi: ExtensionAPI) {
           return `### ${t.agent} (${status})\n**Task:** ${t.task}\n\n${r.output || r.error || "(no output)"}`;
         });
 
-        return {
-          content: [{
-            type: "text" as const,
-            text: `Parallel execution complete (${tasks.length} tasks). ${formatUsageStats(totalUsage)}\n\n${outputParts.join("\n\n---\n\n")}`,
-          }],
-          details: undefined,
-        };
+        return toolResult(`Parallel execution complete (${tasks.length} tasks). ${formatUsageStats(totalUsage)}\n\n${outputParts.join("\n\n---\n\n")}`);
       } else if (params.agent && params.task) {
         // Single mode
         const agent = findAgent(params.agent as string);
         if (!agent) {
-          return {
-            content: [{ type: "text" as const, text: `Unknown agent: ${params.agent}` }],
-            details: undefined,
-          };
+          return toolResult(`Unknown agent: ${params.agent}`);
         }
 
         const result = await runSingleAgent(
@@ -448,30 +416,12 @@ export default function (pi: ExtensionAPI) {
         );
 
         if (!result.success) {
-          return {
-            content: [{
-              type: "text" as const,
-              text: `Agent "${params.agent}" failed: ${result.error ?? "unknown error"}\n\n${result.output}`,
-            }],
-            details: undefined,
-          };
+          return toolResult(`Agent "${params.agent}" failed: ${result.error ?? "unknown error"}\n\n${result.output}`);
         }
 
-        return {
-          content: [{
-            type: "text" as const,
-            text: `${result.output}\n\n---\n${formatUsageStats(result.usage, result.model)}`,
-          }],
-          details: undefined,
-        };
+        return toolResult(`${result.output}\n\n---\n${formatUsageStats(result.usage, result.model)}`);
       } else {
-        return {
-          content: [{
-            type: "text" as const,
-            text: "Invalid parameters. Use one of: { agent, task } for single mode, { tasks: [...] } for parallel, or { chain: [...] } for sequential.",
-          }],
-          details: undefined,
-        };
+        return toolResult("Invalid parameters. Use one of: { agent, task } for single mode, { tasks: [...] } for parallel, or { chain: [...] } for sequential.");
       }
     },
 

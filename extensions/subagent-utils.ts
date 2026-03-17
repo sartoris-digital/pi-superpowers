@@ -2,9 +2,15 @@
  * Pure utility functions for the subagent extension.
  */
 
+import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+
+/** Build a standard tool response with text content. */
+export function toolResult(text: string): AgentToolResult<undefined> {
+  return { content: [{ type: "text", text }], details: undefined };
+}
 
 export interface Message {
   role: string;
