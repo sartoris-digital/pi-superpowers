@@ -20,15 +20,10 @@ function getContent(): string {
 }
 
 export default function (pi: ExtensionAPI) {
-  // Use the context event for idiomatic Pi context injection
-  pi.on("context", (_event: unknown, _ctx: unknown) => {
+  // Inject superpowers content into the system prompt before each agent loop
+  pi.on("before_agent_start", () => {
     return {
-      sections: [
-        {
-          title: "Superpowers Skills Framework",
-          content: getContent(),
-        },
-      ],
+      systemPrompt: `## Superpowers Skills Framework\n\n${getContent()}`,
     };
   });
 }

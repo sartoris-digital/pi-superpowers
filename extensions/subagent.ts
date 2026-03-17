@@ -11,7 +11,7 @@
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import type { ToolCallRenderArgs, ToolResultRenderArgs } from "@mariozechner/pi-coding-agent";
+import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import { spawn } from "node:child_process";
 import * as fs from "node:fs";
@@ -264,6 +264,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerTool({
     name: "subagent",
+    label: "Subagent",
     description:
       "Dispatch tasks to specialized subagents. Supports three modes: " +
       "single (one agent, one task), parallel (multiple independent tasks, up to 8 with 4 concurrent), " +
@@ -278,14 +279,14 @@ export default function (pi: ExtensionAPI) {
     async execute(
       toolCallId: string,
       params: Record<string, unknown>,
-      signal: AbortSignal,
-      onUpdate: (data: unknown) => void,
+      signal: AbortSignal | undefined,
+      onUpdate: ((data: AgentToolResult<unknown>) => void) | undefined,
       ctx: { cwd: string },
     ) {
       // Discover agents
       const { agents, projectAgentsDir } = discoverAgentsWithProjectDir(
         ctx.cwd,
-        projectAgentsDir ? "both" : "user",
+        "both",
       );
 
       const routerConfig = loadRouterConfig(projectAgentsDir ? path.dirname(projectAgentsDir) : undefined);
@@ -303,24 +304,23 @@ export default function (pi: ExtensionAPI) {
         const results: SingleResult[] = [];
 
         for (const step of chain) {
-          if (signal.aborted) break;
+          if (signal?.aborted) break;
 
           const agent = findAgent(step.agent);
           if (!agent) {
             return {
-              content: [{ type: "text", text: `Unknown agent: ${step.agent}` }],
-              isError: true,
+              content: [{ type: "text" as const, text: `Unknown agent: ${step.agent}` }],
+              details: undefined,
             };
           }
 
           // Substitute {previous} placeholder
           const resolvedTask = step.task.replace(/\{previous\}/g, previousOutput);
 
-          const result = await runSingleAgent(agent, resolvedTask, signal, (details) => {
-            onUpdate({
-              type: "chain_progress",
-              agent: step.agent,
-              ...details,
+          const result = await runSingleAgent(agent, resolvedTask, signal!, (details) => {
+            onUpdate?.({
+              content: [],
+              details: { type: "chain_progress", agent: step.agent, ...details },
             });
           }, routerConfig, step.tier);
 
@@ -330,10 +330,10 @@ export default function (pi: ExtensionAPI) {
           if (!result.success) {
             return {
               content: [{
-                type: "text",
+                type: "text" as const,
                 text: `Chain failed at step "${step.agent}": ${result.error ?? "unknown error"}\n\nOutput so far:\n${previousOutput}`,
               }],
-              isError: true,
+              details: undefined,
             };
           }
         }
@@ -354,9 +354,10 @@ export default function (pi: ExtensionAPI) {
 
         return {
           content: [{
-            type: "text",
+            type: "text" as const,
             text: `Chain completed (${chain.length} steps). ${formatUsageStats(totalUsage)}\n\n${lastResult?.output ?? ""}`,
           }],
+          details: undefined,
         };
       } else if (params.tasks && Array.isArray(params.tasks)) {
         // Parallel mode
@@ -365,10 +366,10 @@ export default function (pi: ExtensionAPI) {
         if (tasks.length > MAX_PARALLEL_TASKS) {
           return {
             content: [{
-              type: "text",
+              type: "text" as const,
               text: `Too many parallel tasks (${tasks.length}). Maximum is ${MAX_PARALLEL_TASKS}.`,
             }],
-            isError: true,
+            details: undefined,
           };
         }
 
@@ -376,8 +377,8 @@ export default function (pi: ExtensionAPI) {
         for (const t of tasks) {
           if (!findAgent(t.agent)) {
             return {
-              content: [{ type: "text", text: `Unknown agent: ${t.agent}` }],
-              isError: true,
+              content: [{ type: "text" as const, text: `Unknown agent: ${t.agent}` }],
+              details: undefined,
             };
           }
         }
@@ -387,12 +388,10 @@ export default function (pi: ExtensionAPI) {
           MAX_CONCURRENCY,
           async (t, index) => {
             const agent = findAgent(t.agent)!;
-            return runSingleAgent(agent, t.task, signal, (details) => {
-              onUpdate({
-                type: "parallel_progress",
-                index,
-                agent: t.agent,
-                ...details,
+            return runSingleAgent(agent, t.task, signal!, (details) => {
+              onUpdate?.({
+                content: [],
+                details: { type: "parallel_progress", index, agent: t.agent, ...details },
               });
             }, routerConfig, t.tier);
           },
@@ -419,26 +418,30 @@ export default function (pi: ExtensionAPI) {
 
         return {
           content: [{
-            type: "text",
+            type: "text" as const,
             text: `Parallel execution complete (${tasks.length} tasks). ${formatUsageStats(totalUsage)}\n\n${outputParts.join("\n\n---\n\n")}`,
           }],
+          details: undefined,
         };
       } else if (params.agent && params.task) {
         // Single mode
         const agent = findAgent(params.agent as string);
         if (!agent) {
           return {
-            content: [{ type: "text", text: `Unknown agent: ${params.agent}` }],
-            isError: true,
+            content: [{ type: "text" as const, text: `Unknown agent: ${params.agent}` }],
+            details: undefined,
           };
         }
 
         const result = await runSingleAgent(
           agent,
           params.task as string,
-          signal,
+          signal!,
           (details) => {
-            onUpdate({ type: "single_progress", agent: params.agent, ...details });
+            onUpdate?.({
+              content: [],
+              details: { type: "single_progress", agent: params.agent, ...details },
+            });
           },
           routerConfig,
           params.tier as string | undefined,
@@ -447,36 +450,37 @@ export default function (pi: ExtensionAPI) {
         if (!result.success) {
           return {
             content: [{
-              type: "text",
+              type: "text" as const,
               text: `Agent "${params.agent}" failed: ${result.error ?? "unknown error"}\n\n${result.output}`,
             }],
-            isError: true,
+            details: undefined,
           };
         }
 
         return {
           content: [{
-            type: "text",
+            type: "text" as const,
             text: `${result.output}\n\n---\n${formatUsageStats(result.usage, result.model)}`,
           }],
+          details: undefined,
         };
       } else {
         return {
           content: [{
-            type: "text",
+            type: "text" as const,
             text: "Invalid parameters. Use one of: { agent, task } for single mode, { tasks: [...] } for parallel, or { chain: [...] } for sequential.",
           }],
-          isError: true,
+          details: undefined,
         };
       }
     },
 
-    renderCall(args: ToolCallRenderArgs, theme: unknown) {
+    renderCall(args: Record<string, unknown>, theme: unknown) {
       // TUI rendering for tool call display
       // This uses Pi TUI components at runtime
       try {
         const { Container, Text } = require("@mariozechner/pi-tui");
-        const params = args.params as Record<string, unknown>;
+        const params = args;
 
         if (params.chain) {
           const chain = params.chain as Array<{ agent: string; task: string }>;
@@ -509,7 +513,7 @@ export default function (pi: ExtensionAPI) {
       }
     },
 
-    renderResult(result: ToolResultRenderArgs, options: unknown, theme: unknown) {
+    renderResult(result: AgentToolResult<unknown>, options: unknown, theme: unknown) {
       try {
         const { Container, Text, Markdown, Spacer } = require("@mariozechner/pi-tui");
         const { getMarkdownTheme } = require("@mariozechner/pi-coding-agent");
