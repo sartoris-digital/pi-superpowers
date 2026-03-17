@@ -2,7 +2,7 @@
   "name": "@sartoris/pi-superpowers",
   "version": "2.1.1",
   "description": "Superpowers skills framework for Pi - TDD, debugging, collaboration patterns, and proven development techniques",
-  "author": "Sartoris",
+  "author": "Nick Collins <nick@sartorisdigital.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
