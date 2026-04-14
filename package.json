@@ -8,12 +8,30 @@
     "type": "git",
     "url": "https://github.com/sartoris-digital/pi-superpowers"
   },
-  "keywords": ["pi", "skills", "tdd", "debugging", "collaboration", "best-practices", "workflows"],
+  "keywords": [
+    "pi",
+    "skills",
+    "tdd",
+    "debugging",
+    "collaboration",
+    "best-practices",
+    "workflows"
+  ],
   "type": "module",
   "pi": {
-    "extensions": ["./extensions/bootstrap.ts", "./extensions/subagent.ts", "./extensions/state-manager.ts", "./extensions/persistence-engine.ts", "./extensions/orchestrator.ts"],
-    "skills": ["./skills"],
-    "prompts": ["./prompts"]
+    "extensions": [
+      "./extensions/bootstrap.ts",
+      "./extensions/subagent.ts",
+      "./extensions/state-manager.ts",
+      "./extensions/persistence-engine.ts",
+      "./extensions/orchestrator.ts"
+    ],
+    "skills": [
+      "./skills"
+    ],
+    "prompts": [
+      "./prompts"
+    ]
   },
   "peerDependencies": {
     "@mariozechner/pi-agent-core": "*",
@@ -23,9 +41,12 @@
     "@sinclair/typebox": ">=0.34.0"
   },
   "devDependencies": {
+    "@mariozechner/pi-ai": "^0.67.1",
+    "@mariozechner/pi-coding-agent": "^0.67.1",
+    "@mariozechner/pi-tui": "^0.67.1",
     "@sinclair/typebox": "^0.34.0",
-    "vitest": "^3.0.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
   },
   "scripts": {
     "test": "vitest run",

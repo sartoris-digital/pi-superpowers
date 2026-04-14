@@ -8,6 +8,8 @@ import { loadRouterConfig } from "./model-router-utils.js";
 export default function (pi: ExtensionAPI) {
   let stateDir = ".pi/state";
 
+  // session_start now fires on startup, reload, new, resume, and fork (Pi 0.65+).
+  // Rebind stateDir and clean up stale entries on every session switch.
   pi.on("session_start", async (_event, ctx) => {
     stateDir = path.join(ctx.cwd, ".pi", "state");
     // Clean up stale states

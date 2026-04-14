@@ -15,6 +15,7 @@ import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import { spawn } from "node:child_process";
 import * as fs from "node:fs";
+import * as path from "node:path";
 import * as readline from "node:readline";
 
 import { discoverAgentsWithProjectDir } from "./agents.js";
@@ -29,7 +30,6 @@ import {
   toolResult,
 } from "./subagent-utils.js";
 import type { Message, UsageStats } from "./subagent-utils.js";
-import * as path from "node:path";
 import { loadRouterConfig, resolveModel } from "./model-router-utils.js";
 import type { RouterConfig } from "./model-router-utils.js";
 
@@ -56,6 +56,27 @@ interface SingleResult {
   model?: string;
   error?: string;
   toolCalls: Array<{ name: string; args: Record<string, unknown> }>;
+}
+
+/**
+ * Resolve the pi invocation: use the current process script if running via node/bun,
+ * otherwise fall back to the `pi` binary on PATH.
+ *
+ * This matches the approach in Pi's official subagent example so subagents work
+ * correctly regardless of how Pi itself was launched.
+ */
+function getPiInvocation(args: string[]): { command: string; args: string[] } {
+  const currentScript = process.argv[1];
+  if (currentScript && fs.existsSync(currentScript)) {
+    return { command: process.execPath, args: [currentScript, ...args] };
+  }
+  const execName = path.basename(process.execPath).toLowerCase();
+  const isGenericRuntime = /^(node|bun)(\.exe)?$/.test(execName);
+  if (!isGenericRuntime) {
+    // Pi is compiled / shipped as a self-contained binary
+    return { command: process.execPath, args };
+  }
+  return { command: "pi", args };
 }
 
 /** Format a tool call for collapsed display in the TUI */
@@ -92,7 +113,8 @@ function formatToolCall(name: string, args: Record<string, unknown>): string {
 async function runSingleAgent(
   agent: AgentConfig,
   task: string,
-  signal: AbortSignal,
+  cwd: string,
+  signal: AbortSignal | undefined,
   onUpdate: (details: Partial<SubagentDetails>) => void,
   routerConfig?: RouterConfig,
   tier?: string,
@@ -102,29 +124,31 @@ async function runSingleAgent(
     : agent.model;
   const args = buildAgentArgs({ model: resolvedModel, tools: agent.tools });
 
-  // Build system prompt with agent's system prompt
-  const fullPrompt = agent.systemPrompt
-    ? `${agent.systemPrompt}\n\n---\n\nTask: ${task}`
-    : task;
+  // Write the agent system prompt to a temp file and pass it via --append-system-prompt.
+  // Pi 0.65+ removed --prompt-file; the task is now passed as a positional argument.
+  let tmpDir: string | null = null;
+  let promptFile: string | null = null;
 
-  const { dir: tmpDir, filePath: promptFile } = writePromptToTempFile(agent.name, fullPrompt);
-
-  // Add prompt file arg
-  args.push("--prompt-file", promptFile);
-
-  // Add system prompt if available
-  if (agent.systemPrompt) {
-    args.push("--system-prompt", agent.systemPrompt);
+  if (agent.systemPrompt?.trim()) {
+    const tmp = writePromptToTempFile(agent.name, agent.systemPrompt);
+    tmpDir = tmp.dir;
+    promptFile = tmp.filePath;
+    args.push("--append-system-prompt", promptFile);
   }
+
+  // Task is the user message — pass as a positional argument
+  args.push(`Task: ${task}`);
 
   const messages: Message[] = [];
   const usage = emptyUsage();
   const toolCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
 
   return new Promise<SingleResult>((resolve) => {
-    const proc = spawn("pi", args, {
-      stdio: ["pipe", "pipe", "pipe"],
-      signal,
+    const invocation = getPiInvocation(args);
+    const proc = spawn(invocation.command, invocation.args, {
+      cwd,
+      shell: false,
+      stdio: ["ignore", "pipe", "pipe"],
     });
 
     const rl = readline.createInterface({ input: proc.stdout });
@@ -146,33 +170,37 @@ async function runSingleAgent(
         if (message) {
           messages.push(message);
 
-          // Track usage
-          if (message.usage) {
-            usage.input += message.usage.input ?? 0;
-            usage.output += message.usage.output ?? 0;
-            usage.cacheRead += message.usage.cacheRead ?? 0;
-            usage.cacheWrite += message.usage.cacheWrite ?? 0;
-            usage.cost += message.usage.cost?.total ?? 0;
-            usage.contextTokens = message.usage.totalTokens ?? 0;
-          }
-          usage.turns++;
+          if (message.role === "assistant") {
+            // Track usage for assistant turns only
+            if (message.usage) {
+              usage.input += message.usage.input ?? 0;
+              usage.output += message.usage.output ?? 0;
+              usage.cacheRead += message.usage.cacheRead ?? 0;
+              usage.cacheWrite += message.usage.cacheWrite ?? 0;
+              usage.cost += message.usage.cost?.total ?? 0;
+              usage.contextTokens = message.usage.totalTokens ?? 0;
+            }
+            usage.turns++;
 
-          // Track tool calls
-          if (message.content) {
-            for (const part of message.content) {
-              if (part.type === "tool_use" && part.name) {
-                toolCalls.push({
-                  name: part.name,
-                  args: (part.arguments ?? {}) as Record<string, unknown>,
-                });
+            // Track tool calls in current Pi JSON protocol (`toolCall`) while also
+            // tolerating the older `tool_use` shape for backward compatibility.
+            if (Array.isArray(message.content)) {
+              for (const part of message.content) {
+                const partType = part.type;
+                if ((partType === "toolCall" || partType === "tool_use") && part.name) {
+                  toolCalls.push({
+                    name: part.name,
+                    args: (part.arguments ?? {}) as Record<string, unknown>,
+                  });
+                }
               }
             }
-          }
 
-          onUpdate({
-            usage: { ...usage },
-            toolCalls: [...toolCalls],
-          });
+            onUpdate({
+              usage: { ...usage },
+              toolCalls: [...toolCalls],
+            });
+          }
         }
       } else if (eventType === "tool_result_end") {
         // Tool results are tracked via message_end above
@@ -187,8 +215,8 @@ async function runSingleAgent(
     proc.on("close", (code: number | null) => {
       // Cleanup temp files
       try {
-        fs.unlinkSync(promptFile);
-        fs.rmdirSync(tmpDir);
+        if (promptFile) fs.unlinkSync(promptFile);
+        if (tmpDir) fs.rmdirSync(tmpDir);
       } catch {
         // Ignore cleanup errors
       }
@@ -209,8 +237,8 @@ async function runSingleAgent(
     proc.on("error", (err: Error) => {
       // Cleanup temp files
       try {
-        fs.unlinkSync(promptFile);
-        fs.rmdirSync(tmpDir);
+        if (promptFile) fs.unlinkSync(promptFile);
+        if (tmpDir) fs.rmdirSync(tmpDir);
       } catch {
         // Ignore cleanup errors
       }
@@ -224,9 +252,20 @@ async function runSingleAgent(
       });
     });
 
-    // Write the task to stdin and close it
-    proc.stdin.write(task);
-    proc.stdin.end();
+    // Handle abort signal: send SIGTERM, then SIGKILL if needed
+    if (signal) {
+      const killProc = () => {
+        proc.kill("SIGTERM");
+        setTimeout(() => {
+          if (!proc.killed) proc.kill("SIGKILL");
+        }, 5000);
+      };
+      if (signal.aborted) {
+        killProc();
+      } else {
+        signal.addEventListener("abort", killProc, { once: true });
+      }
+    }
   });
 }
 
@@ -315,7 +354,7 @@ export default function (pi: ExtensionAPI) {
           // Substitute {previous} placeholder
           const resolvedTask = step.task.replace(/\{previous\}/g, previousOutput);
 
-          const result = await runSingleAgent(agent, resolvedTask, signal!, (details) => {
+          const result = await runSingleAgent(agent, resolvedTask, ctx.cwd, signal, (details) => {
             onUpdate?.({
               content: [],
               details: { type: "chain_progress", agent: step.agent, ...details },
@@ -365,7 +404,7 @@ export default function (pi: ExtensionAPI) {
           MAX_CONCURRENCY,
           async (t, index) => {
             const agent = findAgent(t.agent)!;
-            return runSingleAgent(agent, t.task, signal!, (details) => {
+            return runSingleAgent(agent, t.task, ctx.cwd, signal, (details) => {
               onUpdate?.({
                 content: [],
                 details: { type: "parallel_progress", index, agent: t.agent, ...details },
@@ -404,7 +443,8 @@ export default function (pi: ExtensionAPI) {
         const result = await runSingleAgent(
           agent,
           params.task as string,
-          signal!,
+          ctx.cwd,
+          signal,
           (details) => {
             onUpdate?.({
               content: [],
@@ -422,73 +462,6 @@ export default function (pi: ExtensionAPI) {
         return toolResult(`${result.output}\n\n---\n${formatUsageStats(result.usage, result.model)}`);
       } else {
         return toolResult("Invalid parameters. Use one of: { agent, task } for single mode, { tasks: [...] } for parallel, or { chain: [...] } for sequential.");
-      }
-    },
-
-    renderCall(args: Record<string, unknown>, theme: unknown) {
-      // TUI rendering for tool call display
-      // This uses Pi TUI components at runtime
-      try {
-        const { Container, Text } = require("@mariozechner/pi-tui");
-        const params = args;
-
-        if (params.chain) {
-          const chain = params.chain as Array<{ agent: string; task: string }>;
-          return Container(
-            { flexDirection: "column" },
-            Text({ style: "bold" }, `subagent chain (${chain.length} steps)`),
-            ...chain.map((step, i) =>
-              Text({}, `  ${i + 1}. ${step.agent}: ${step.task.slice(0, 80)}${step.task.length > 80 ? "..." : ""}`),
-            ),
-          );
-        } else if (params.tasks) {
-          const tasks = params.tasks as Array<{ agent: string; task: string }>;
-          return Container(
-            { flexDirection: "column" },
-            Text({ style: "bold" }, `subagent parallel (${tasks.length} tasks)`),
-            ...tasks.map((t) =>
-              Text({}, `  - ${t.agent}: ${t.task.slice(0, 80)}${t.task.length > 80 ? "..." : ""}`),
-            ),
-          );
-        } else {
-          return Container(
-            { flexDirection: "column" },
-            Text({ style: "bold" }, `subagent → ${params.agent}`),
-            Text({}, `  ${String(params.task ?? "").slice(0, 120)}`),
-          );
-        }
-      } catch {
-        // Fallback if TUI components not available
-        return undefined;
-      }
-    },
-
-    renderResult(result: AgentToolResult<unknown>, options: unknown, theme: unknown) {
-      try {
-        const { Container, Text, Markdown, Spacer } = require("@mariozechner/pi-tui");
-        const { getMarkdownTheme } = require("@mariozechner/pi-coding-agent");
-        const mdTheme = getMarkdownTheme(theme);
-
-        const content = result.content;
-        if (!content || !Array.isArray(content)) return undefined;
-
-        const textPart = content.find((p: { type: string }) => p.type === "text") as
-          | { type: string; text: string }
-          | undefined;
-        if (!textPart?.text) return undefined;
-
-        // For collapsed view, show summary
-        const lines = textPart.text.split("\n");
-        const summary = lines[0];
-        const details = lines.slice(1).join("\n");
-
-        return Container(
-          { flexDirection: "column" },
-          Text({ style: "bold" }, summary),
-          details ? Markdown({ theme: mdTheme }, details) : Spacer({ size: 0 }),
-        );
-      } catch {
-        return undefined;
       }
     },
   });

@@ -47,6 +47,9 @@ export function emptyUsage(): UsageStats {
  * Build CLI args array for a pi subprocess.
  * Always includes: --mode json -p --no-session
  * Optionally includes: --model, --tools
+ *
+ * Note: --prompt-file was removed in Pi 0.65. System prompts are now passed via
+ * --append-system-prompt and the task is passed as a positional argument.
  */
 export function buildAgentArgs(options: {
   model: string | undefined;

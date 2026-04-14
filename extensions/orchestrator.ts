@@ -21,6 +21,8 @@ export default function (pi: ExtensionAPI) {
   let cwd = ".";
   let config = loadRouterConfig();
 
+  // session_start now fires on startup, reload, new, resume, and fork (Pi 0.65+).
+  // We re-read cwd and reload config on every session change so state paths stay correct.
   pi.on("session_start", async (_event, ctx) => {
     cwd = ctx.cwd;
     config = loadRouterConfig(cwd);

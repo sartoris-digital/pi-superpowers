@@ -11,6 +11,8 @@ export default function (pi: ExtensionAPI) {
   let maxIterations = 50;
   let staleTimeout = 14400;
 
+  // session_start now fires on startup, reload, new, resume, and fork (Pi 0.65+).
+  // Rebind stateDir and config on every session switch so paths stay correct.
   pi.on("session_start", async (event, ctx) => {
     stateDir = path.join(ctx.cwd, ".pi", "state");
     const config = loadRouterConfig(ctx.cwd);
